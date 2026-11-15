@@ -1070,9 +1070,9 @@ function drawRay(ctx, a, tile) {
   }
   for (const side of [1, -1]) {
     const grad = ctx.createLinearGradient(...place(10, 60, side), ...place(88, 70, side));
-    grad.addColorStop(0, "#dcdfdc");
-    grad.addColorStop(0.55, "#b7bdbd");
-    grad.addColorStop(1, "#737b80");
+    grad.addColorStop(0, "#b4babb");
+    grad.addColorStop(0.55, "#9aa1a3");
+    grad.addColorStop(1, "#6d757a");
     ctx.beginPath();
     trace(PATCH.map(([o, b]) => place(o, b, side)));
     ctx.closePath();

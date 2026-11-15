@@ -1,7 +1,7 @@
 // The oceanic manta from above: a rigid rhomboid disc whose wings beat slowly, a whip tail behind. The beat is a wave
 // that runs out along each wing and back across it, so the tip lags the root and the outline curls; from above, a wing
 // raised or lowered is shorter by the cosine of its angle. In a turn it banks: the inner wing dips, the outer rises.
-// Dorsal colours: black with two white shoulder patches, grey toward their ends and along the rear margins.
+// Dorsal colours: black with two pale shoulder patches, grey toward their ends and along the rear margins.
 
 import { KINDS, poseOf, spineOf, strokes, type Animal, type Frame } from '../sim.ts'
 import { EYE, at, type Ctx } from './common.ts'
@@ -151,12 +151,13 @@ export function drawRay(ctx: Ctx, a: Animal, tile: number): void {
     trace(left.slice(-TRAIL.length))
     ctx.stroke()
   }
-  // The shoulder patches: white by the midline, blending to grey toward the hooked ends.
+  // The shoulder patches: pale by the midline, blending to grey toward the hooked ends. Not white: by day, white came
+  // out as pale as the water, and as the manta moved its middle tiles flicked between the body and holes in it.
   for (const side of [1, -1]) {
     const grad = ctx.createLinearGradient(...place(10, 60, side), ...place(88, 70, side))
-    grad.addColorStop(0, '#dcdfdc')
-    grad.addColorStop(0.55, '#b7bdbd')
-    grad.addColorStop(1, '#737b80')
+    grad.addColorStop(0, '#b4babb')
+    grad.addColorStop(0.55, '#9aa1a3')
+    grad.addColorStop(1, '#6d757a')
     ctx.beginPath()
     trace(PATCH.map(([o, b]) => place(o, b, side)))
     ctx.closePath()

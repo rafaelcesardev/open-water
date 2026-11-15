@@ -3,7 +3,10 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createBackdrop } from './backdrop.ts'
-import { parseColor } from './mosaic.ts'
+import { DRAW } from './draw/all.ts'
+import type { Ctx } from './draw/common.ts'
+import { createMosaic, parseColor } from './mosaic.ts'
+import { KINDS, createSea, stepSea } from './sim.ts'
 import { SvgPath, animate, type El } from './svg.ts'
 
 test('each send fits the app and moves, for every kind the smooth style lets in', () => {
@@ -91,5 +94,39 @@ test('the sea starts empty: the first animals come in from beyond an edge, never
     const svg = b.next()
     const first = svg.slice(svg.indexOf('<g transform="scale('), svg.indexOf('<g visibility="hidden">'))
     assert.doesNotMatch(first, /<path/, `run ${run}`)
+  }
+})
+
+test('by day the manta keeps its middle: few of its tiles come out as pale as the water', () => {
+  const random = Math.random
+  let seed = 7
+  Math.random = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646
+  try {
+    const sea = createSea(2400, 1500)
+    sea.atOnce = 1
+    sea.allowed = new Set([KINDS.findIndex(k => k.name === 'manta')])
+    const tiles = createMosaic(2400, 1500, 10)
+    const water = [249, 249, 247]
+    // A lit tile as it shows over the pale water, at its see-through level; within 40 of the water it reads as a hole.
+    const hole = (c: number): boolean => {
+      const l = (c >>> 24) / 10
+      return [(c >> 16) & 255, (c >> 8) & 255, c & 255].every((v, i) => Math.abs(l * v + (1 - l) * water[i]! - water[i]!) < 40)
+    }
+    let [holes, moments] = [0, 0]
+    for (let m = 0; m < 450; m += 1) {
+      for (let k = 0; k < 6; k += 1) stepSea(sea, 1 / 60, 20)
+      const shot = tiles.shot()
+      for (const a of sea.animals) {
+        DRAW[KINDS[a.kind]!.plan](tiles.ctx as unknown as Ctx, a, tiles.ctx.tile)
+        tiles.take(shot, a.depth)
+      }
+      if (m < 150) continue
+      moments += 1
+      for (const c of shot) if (c !== -1 && hole(c)) holes += 1
+    }
+    // White patches made some 27 a moment, flicking on and off as it swam.
+    assert.ok(holes / moments < 3, `${(holes / moments).toFixed(1)} a moment`)
+  } finally {
+    Math.random = random
   }
 })
