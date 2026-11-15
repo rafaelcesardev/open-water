@@ -4,7 +4,7 @@
 // A body that bends is drawn along `spineOf(animal)`; a rigid one (a shell, a disc) from `poseOf(animal)`. Where it
 // is in its stroke is the fraction of `strokes(animal)`.
 
-import type { Frame } from '../sim'
+import type { Frame } from '../sim.ts'
 
 export type Ctx = CanvasRenderingContext2D
 

@@ -4,8 +4,8 @@
 // It jets in pulses: the mantle clenches (narrower, fins folded, arms and tentacles pressed straight behind), then
 // refills slowly while the arms drift apart and the tentacles wave.
 
-import { KINDS, spineOf, strokes, type Animal, type Frame } from '../sim'
-import { EYE, at, near, type Ctx } from './common'
+import { KINDS, spineOf, strokes, type Animal, type Frame } from '../sim.ts'
+import { EYE, at, near, type Ctx } from './common.ts'
 
 type Pt = [number, number]
 type By = (i: number) => number

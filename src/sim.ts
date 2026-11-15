@@ -1,7 +1,7 @@
 // The sea: a small simulation of the animals in view, stepped as time passes. Nothing here is planned ahead: each
 // animal decides as it goes, with real randomness, so no two minutes are alike.
 //
-// THE WORLD is WIDTH units wide and `h` deep, at 80 units a metre: every animal at its real size, so a blue whale
+// THE WORLD is `w` units wide and `h` deep, at 80 units a metre: every animal at its real size, so a blue whale
 // spans most of the view and a turtle is a fortieth of it.
 // ONLY WHAT IS IN VIEW EXISTS: at most `atOnce` animals at once, four by default (a school of fish counts as one), of
 // the kinds allowed. One comes in from beyond a random edge, stays a while, and swims off; once wholly out of view it
@@ -15,7 +15,7 @@
 // Nobody stops and nobody turns on the spot. Each swims at one of three levels, and only those at the same level give
 // way: one at another passes over or under.
 
-import { stepSchool } from './school'
+import { stepSchool } from './school.ts'
 
 /** How a body is built, and so how it moves and is drawn. */
 export type Plan = 'shark' | 'cetacean' | 'turtle' | 'ray' | 'squid' | 'school'
@@ -96,11 +96,6 @@ export const KINDS: Kind[] = [
   { name: 'jacks', plan: 'school', length: 0.6 * M, girth: 4, widest: 0, snout: 0, fin: 0, reach: 260, speed: 55, beat: 0.5, turn: 3.5, trunk: 1, sway: 0.1, surge: 0, sprint: 3, whim: 1, stay: [30, 70], prey: [], levels: [1, 2] },
 ]
 
-/** The sea's width in units (1600 by default): a wider sea, seen in the same window, shows the animals smaller. */
-export let WIDTH = 1600
-export function setWidth(width: number): void {
-  WIDTH = width
-}
 /** Units between two points of a body. */
 const STEP = 10
 
@@ -148,6 +143,8 @@ export type Animal = {
   dive: number
 }
 export type Sea = {
+  /** Its width and depth in units: a wider sea, seen in the same window, shows the animals smaller. */
+  w: number
   h: number
   animals: Animal[]
   /** Seconds before another animal may come in, and the kind that left last (the next one is never that). */
@@ -156,7 +153,6 @@ export type Sea = {
   /** At most this many animals in view at once (a school counts as one), and the kinds that may come in. */
   atOnce: number
   allowed: Set<number>
-  chases: number
 }
 
 const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v))
@@ -248,9 +244,20 @@ export function discsOf(a: Animal): (Point & { r: number })[] {
   return discs
 }
 
+/** The middle of a school's fish. */
+export function middleOf(fish: Fish[]): Point {
+  let x = 0
+  let y = 0
+  for (const f of fish) {
+    x += f.x
+    y += f.y
+  }
+  return { x: x / fish.length, y: y / fish.length }
+}
+
 /** Where a chaser makes for: the tail of its prey, or the middle of a school. */
 function tailOf(a: Animal): Point {
-  if (a.fish.length > 0) return { x: a.fish.reduce((s, f) => s + f.x, 0) / a.fish.length, y: a.fish.reduce((s, f) => s + f.y, 0) / a.fish.length }
+  if (a.fish.length > 0) return middleOf(a.fish)
   const k = KINDS[a.kind]!
   let behind = 0
   let last: Point = a
@@ -262,12 +269,11 @@ function tailOf(a: Animal): Point {
   return last
 }
 
-/** A sea `h` units deep and empty: the first animals come in over the first seconds. */
-export function createSea(h: number): Sea {
-  return { h, animals: [], next: 0, gone: -1, chases: 0, atOnce: 4, allowed: new Set(KINDS.map((_, i) => i)) }
+/** A sea `w` units wide and `h` deep, and empty: the first animals come in over the first seconds. */
+export function createSea(w: number, h: number): Sea {
+  return { w, h, animals: [], next: 0, gone: -1, atOnce: 4, allowed: new Set(KINDS.map((_, i) => i)) }
 }
 
-/** An animal of `kind` with its head at (x, y), its body straight behind it, making for `to`. */
 /** The depth of a level (1 to 3). */
 export const depthOf = (level: number): number => (level - 1) / 2
 /** One of the levels it keeps, at random, as a depth. */
@@ -275,6 +281,7 @@ const deepIn = (k: Kind, random: () => number): number => depthOf(k.levels[Math.
 /** Two at different levels pass one over the other: neither has to give way. */
 export const apart = (a: Animal, b: Animal): boolean => Math.abs(a.depth - b.depth) >= 0.25
 
+/** An animal of `kind` with its head at (x, y), its body straight behind it, making for `to`. */
 function make(kind: number, x: number, y: number, heading: number, to: Point, random: () => number): Animal {
   const k = KINDS[kind]!
   const trail: Point[] = []
@@ -297,7 +304,7 @@ function make(kind: number, x: number, y: number, heading: number, to: Point, ra
  */
 export function place(sea: Sea, kind: number, random: () => number = Math.random): Animal {
   const heading = random() * Math.PI * 2
-  const a = make(kind, WIDTH / 2, sea.h / 2, heading, { x: WIDTH / 2, y: sea.h / 2 }, random)
+  const a = make(kind, sea.w / 2, sea.h / 2, heading, { x: sea.w / 2, y: sea.h / 2 }, random)
   Object.assign(a, { mode: 'roam', stay: Infinity, seen: true })
   sea.animals = [a]
   sea.next = Infinity
@@ -323,9 +330,9 @@ function arrive(sea: Sea, random: () => number): void {
     const along = 0.1 + random() * 0.8
     // Its front tip a little way off, so it comes in at once.
     const off = 20 + k.reach + random() * 120
-    const x = edge === 0 ? -off : edge === 1 ? WIDTH + off : along * WIDTH
+    const x = edge === 0 ? -off : edge === 1 ? sea.w + off : along * sea.w
     const y = edge === 2 ? -off : edge === 3 ? sea.h + off : along * sea.h
-    const to = { x: WIDTH * (0.2 + random() * 0.6), y: sea.h * (0.2 + random() * 0.6) }
+    const to = { x: sea.w * (0.2 + random() * 0.6), y: sea.h * (0.2 + random() * 0.6) }
     const heading = Math.atan2(to.y - y, to.x - x)
     // Its way in: from beyond the end of its body to a body length inside.
     const path: Point[] = []
@@ -358,14 +365,15 @@ export function shift(sea: Sea, dx: number, dy: number): void {
 
 /** Moves the sea on by `dt` seconds. */
 export function stepSea(sea: Sea, dt: number, tile: number, random: () => number = Math.random): void {
-  const inView = (p: Point, margin: number): boolean => p.x > -margin && p.x < WIDTH + margin && p.y > -margin && p.y < sea.h + margin
+  const inView = (p: Point, margin: number): boolean => p.x > -margin && p.x < sea.w + margin && p.y > -margin && p.y < sea.h + margin
 
   // What has wholly left the view is gone; and what never came in, after a while.
   sea.animals = sea.animals.filter(a => {
     a.age += dt
     const discs = discsOf(a)
     if (!a.seen && discs.some(c => inView(c, -c.r * 0.5))) a.seen = true
-    const gone = (a.seen && discs.every(c => !inView(c, c.r + tile))) || (!a.seen && a.age > 40)
+    // One being watched (place) is never gone: beyond the edge it only turns back.
+    const gone = a.stay < Infinity && ((a.seen && discs.every(c => !inView(c, c.r + tile))) || (!a.seen && a.age > 40))
     if (gone) {
       sea.gone = a.kind
       for (const o of sea.animals) if (o.prey === a) o.prey = undefined
@@ -423,12 +431,12 @@ export function stepSea(sea: Sea, dt: number, tile: number, random: () => number
       s.curve *= 0.98
     } else if (s.mode === 'enter' || s.mode === 'return') {
       steer(s.to)
-      if (s.x > 160 && s.x < WIDTH - 160 && s.y > 140 && s.y < sea.h - 140) s.mode = 'roam'
+      if (s.x > 160 && s.x < sea.w - 160 && s.y > 140 && s.y < sea.h - 140) s.mode = 'roam'
     } else if (s.stay <= 0) {
       s.mode = 'leave'
     } else if (!inView(s, 110)) {
       s.mode = 'return'
-      s.to = { x: WIDTH * (0.15 + random() * 0.7), y: sea.h * (0.2 + random() * 0.6) }
+      s.to = { x: sea.w * (0.15 + random() * 0.7), y: sea.h * (0.2 + random() * 0.6) }
     } else {
       // Roaming: the curve drifts at random and relaxes toward straight; now and then, a tight turn.
       if (s.tight > 0) {
@@ -462,7 +470,6 @@ export function stepSea(sea: Sea, dt: number, tile: number, random: () => number
             s.mode = 'chase'
             s.prey = prey
             s.modeFor = 4 + random() * 3
-            sea.chases += 1
             break
           }
         }

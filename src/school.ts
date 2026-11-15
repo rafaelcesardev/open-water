@@ -3,7 +3,7 @@
 // not too far. And above them all, one: clear of anything big. A fish that sees a body coming darts off at once; the
 // school bursts open round it and, once it has passed, the fish draw together again.
 
-import { KINDS, apart, discsOf, type Animal, type Fish, type Point } from './sim'
+import { KINDS, apart, discsOf, middleOf, turnTo, type Animal, type Fish, type Point } from './sim.ts'
 
 /** Turning, in radians a second, at the most: quick, but a fish still swings through a turn. */
 const TURN = 7
@@ -20,8 +20,7 @@ export function stepSchool(s: Animal, animals: Animal[], dt: number, random: () 
   const around = bl * 5
 
   // The bodies close enough to matter, each as discs, and where each head will be in a moment.
-  const cx = fish.reduce((t, f) => t + f.x, 0) / fish.length
-  const cy = fish.reduce((t, f) => t + f.y, 0) / fish.length
+  const { x: cx, y: cy } = middleOf(fish)
   const threats: (Point & { r: number })[] = []
   for (const o of animals) {
     // One at another level passes over or under the school: it does not part for it.
@@ -107,10 +106,7 @@ export function stepSchool(s: Animal, animals: Animal[], dt: number, random: () 
     // Turn toward that way, no faster than a fish can; speed up when afraid.
     const heading = Math.atan2(f.vy, f.vx)
     const want = Math.atan2(wy, wx)
-    let d = (want - heading) % (Math.PI * 2)
-    if (d > Math.PI) d -= Math.PI * 2
-    if (d < -Math.PI) d += Math.PI * 2
-    const turn = Math.max(-TURN * dt, Math.min(TURN * dt, d))
+    const turn = Math.max(-TURN * dt, Math.min(TURN * dt, turnTo(heading, want)))
     const target = cruise * (1 + fear * (k.sprint - 1)) * (0.95 + random() * 0.1)
     const was = Math.hypot(f.vx, f.vy)
     const speed = was + (target - was) * Math.min(1, dt * (target > was ? 6 : 1.5))

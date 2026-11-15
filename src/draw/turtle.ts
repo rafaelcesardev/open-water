@@ -2,8 +2,8 @@
 // flies with (power stroke, glide, recovery), small rear flippers that steer, and a short tail between them. Drawn in
 // a frame of (back, side): `back` units behind the head tip, `side` units out from the midline.
 
-import { KINDS, poseOf, strokes, type Animal } from '../sim'
-import { EYE, at, type Ctx } from './common'
+import { KINDS, poseOf, strokes, type Animal } from '../sim.ts'
+import { EYE, at, type Ctx } from './common.ts'
 
 type Pt = [number, number]
 

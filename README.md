@@ -17,7 +17,7 @@ Um mar escuro visto de cima, ao vivo, e os animais que passam por ele no tamanho
   - o casco da tartaruga e o disco da manta são rígidos: a tartaruga rema com as nadadeiras da frente e plana, e a manta bate as asas devagar;
   - a lula vai com o manto à frente, em jatos, com os braços e os tentáculos atrás.
 - **Cores reais vistas de cima:** o dorso de cada espécie, mais escuro no meio e mais claro para os lados. Orca e manta usam um preto levemente clareado, senão sumiriam no mar escuro. Quanto mais fundo, mais o animal se apaga na água: no estilo liso, a cor vai para a da água, um pouco mais azulada, e o contorno desfoca; no mosaico, os ladrilhos ficam transparentes (metade no nível 2, quase invisíveis no 3).
-- **Superfície:** a luz que as ondulações da superfície focam (cáusticas) passa pelo dorso dos animais, presa à água enquanto eles nadam por baixo, mais forte nos rasos e mais fraca à noite. No tema escuro, a lua faz brilhos breves na água, por cima de tudo.
+- **Superfície:** a luz que as ondulações da superfície focam (cáusticas) passa pelo dorso dos animais, presa à água enquanto eles nadam por baixo, mais forte nos rasos e mais fraca à noite.
 - **Mosaico:** cada ladrilho acende inteiro com a cor do animal que está embaixo, um pouco mais claro ou mais escuro que os vizinhos, com uma letra recortada. Os xaréus são mais finos que um ladrilho, então cada um acende um traço de ladrilhos ao longo do corpo, e o cardume aparece como muitos traços paralelos, todos na mesma direção.
 
 ## Controles
@@ -38,7 +38,7 @@ O painel recolhe num botão. Em tela estreita, ele já começa recolhido. As esc
 Abra `index.html` por um servidor (módulos não carregam direto do arquivo):
 
 ```bash
-npx serve .
+npx serve .   # ou: bunx serve .
 ```
 
 Num site, basta o `open-water.js` e um elemento para ocupar:
@@ -61,7 +61,7 @@ Opções:
 - `atOnce`: quantos animais no máximo de uma vez (o cardume conta como um). Padrão `4`.
 - `species`: as espécies que podem entrar, por nome (`'white'`, `'hammer'`, `'tiger'`, `'blacktip'`, `'blue'`, `'orca'`, `'dolphin'`, `'turtle'`, `'manta'`, `'squid'`, `'jacks'`). Padrão: todas.
 - `speed`: velocidade do tempo. `1` é tempo real. Padrão `1`.
-- `surface`: `true` (padrão) liga a luz da superfície (cáusticas e brilhos da lua); `false` desliga.
+- `surface`: `true` (padrão) liga a luz da superfície (cáusticas sobre os animais); `false` desliga.
 - `background`: cor da água no tema escuro. Padrão `#191919`.
 - `controls`: `true` mostra o painel de controles. Padrão `false`, para quem incorpora num site não ganhar um painel sem pedir. O `index.html` liga.
 
@@ -69,15 +69,21 @@ Com "reduzir movimento" ligado no sistema, mostra uma cena parada.
 
 ## Código
 
-- `src/sim.ts`: a simulação: espécies com tamanho e ritmo reais, entrada e saída, perseguição, fuga, desvio.
+- `src/sim.ts`: a simulação: espécies com tamanho e ritmo reais, entrada e saída, perseguição, fuga, desvio. Não toca no navegador: cada mar guarda a própria largura, então dois podem rodar na mesma página.
+- `src/sim.test.ts`: os testes da simulação, sem canvas.
 - `src/school.ts`: o cardume, peixe a peixe.
 - `src/draw/`: o desenho de cada tipo de corpo (`shark`, `cetacean`, `turtle`, `ray`, `squid`, `school`).
 - `src/index.ts`: o canvas (contorno e mosaico) e `mountOpenWater`.
 - `src/panel.ts`: o painel de controles.
 - `open-water.js`: tudo junto, pronto para o navegador.
 
-Para gerar o `open-water.js` de novo depois de mudar o código:
+Tudo é TypeScript; o único JavaScript é o `open-water.js`, gerado. Funciona igual com Node ou Bun:
 
 ```bash
-npx esbuild src/index.ts --bundle --format=esm --target=es2020 --outfile=open-water.js
+npm install      # ou: bun install
+npm run check    # confere os tipos (ou: bun run check)
+npm test         # testa a simulação (ou: bun test)
+npm run build    # gera o open-water.js de novo (ou: bun run build)
 ```
+
+Os imports levam a extensão `.ts`, então o Node roda o código-fonte direto, sem compilar.

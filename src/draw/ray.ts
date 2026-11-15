@@ -3,8 +3,8 @@
 // raised or lowered is shorter by the cosine of its angle. In a turn it banks: the inner wing dips, the outer rises.
 // Dorsal colours: black with two white shoulder patches, grey toward their ends and along the rear margins.
 
-import { KINDS, poseOf, spineOf, strokes, type Animal, type Frame } from '../sim'
-import { EYE, at, type Ctx } from './common'
+import { KINDS, poseOf, spineOf, strokes, type Animal, type Frame } from '../sim.ts'
+import { EYE, at, type Ctx } from './common.ts'
 
 type P = [number, number]
 

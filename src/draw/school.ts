@@ -4,8 +4,8 @@
 // In the mosaic a fish is narrower than a tile, so each lights a streak of tiles along its body: the school reads as
 // many short parallel strokes, all one way.
 
-import { KINDS, type Animal } from '../sim'
-import type { Ctx } from './common'
+import { KINDS, type Animal } from '../sim.ts'
+import type { Ctx } from './common.ts'
 
 const BACK = '#46545d'
 const FLANK = '#a3afb5'

@@ -3,8 +3,8 @@
 // each one's dorsal colours: a blue whale's mottled blue-grey, an orca's black with its white eye patches, grey saddle
 // and white flanks, a dolphin's dark cape over paler grey sides.
 
-import { KINDS, spineOf, strokes, type Animal, type Frame } from '../sim'
-import { at, type Ctx } from './common'
+import { KINDS, spineOf, strokes, type Animal, type Frame } from '../sim.ts'
+import { at, type Ctx } from './common.ts'
 
 type Pt = [number, number]
 /** Bezier points of one half of a shape: start, two controls, the apex, two controls, the end. */

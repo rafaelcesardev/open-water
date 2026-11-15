@@ -10,9 +10,9 @@
 // tile is drawn a little brighter or darker than its neighbours, with a glyph cut into it: tiles light up and go dark
 // in place as an animal passes. `style: 'smooth'` shows the drawn animals themselves.
 
-import { DRAW } from './draw/all'
-import { mountPanel, type Settings } from './panel'
-import { KINDS, WIDTH, createSea, depthOf, discsOf, place, setWidth, shift, spineOf, stepSea, type Animal, type Kind, type Point, type Sea } from './sim'
+import { DRAW } from './draw/all.ts'
+import { mountPanel, type Settings } from './panel.ts'
+import { KINDS, createSea, depthOf, discsOf, middleOf, place, shift, spineOf, stepSea, type Animal, type Kind, type Point, type Sea } from './sim.ts'
 
 export type Options = {
   /** 'mosaic' (default): the animals as glyph tiles. 'smooth': the drawn animals themselves. */
@@ -29,12 +29,11 @@ export type Options = {
   species?: Kind['name'][]
   /** How fast time runs: 1 real time. Default 1. */
   speed?: number
-  /** Light from the surface: caustics rippling over the animals, the shallower the brighter, and at night the moon
-   * glinting on the water. Default true. */
+  /** Light from the surface: caustics rippling over the animals, the shallower the brighter. Default true. */
   surface?: boolean
   /** The dark theme's water. Default #191919. */
   background?: string
-  /** A floating panel on the left to change all of the above as it runs; the viewer's choices are remembered. */
+  /** A floating panel on the right to change all of the above as it runs; the viewer's choices are remembered. */
   controls?: boolean
 }
 
@@ -79,6 +78,9 @@ function rng(seed: number): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
 }
+
+/** A colour in whole numbers: what the browser would round to anyway, and far quicker for it to write and read. */
+const rgb = (r: number, g: number, b: number): string => `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`
 
 /** The mosaic's tiles: 16 by 16 of slightly different brightness, most with a glyph, repeated across the sea. */
 function tileTable(): { shade: number[]; glyph: string[] } {
@@ -164,8 +166,8 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
     settings.observe = null
   }
   const darkWater = options.background ?? '#191919'
+  /** The open sea's width in units at the distance chosen: 1600 as designed. */
   const normalWidth = (): number => 1600 * Math.max(0.5, settings.zoomOut)
-  setWidth(normalWidth())
   const tiles = tileTable()
 
   const canvas = document.createElement('canvas')
@@ -195,13 +197,13 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
   let scale = 1
   let cols = 0
   let rows = 0
+  /** Mosaic: how deep the body lighting each tile swims. */
+  let deep = new Float32Array(0)
   /**
    * Watching one animal: a sea of its own, far wider than the view, with only that animal in it, and a camera that
    * follows it, framed by its size. It swims, turns and bursts as ever; it just never leaves the middle of the view.
    */
   let watch: { sea: Sea; kind: Kind; view: number; x: number; y: number } | undefined
-  /** The open sea's width in units (WIDTH is the watched animal's world while watching). */
-  let seaWidth = 0
   let panel: ReturnType<typeof mountPanel> | undefined
 
   /** The sea's settings that the simulation reads: how many at once, which kinds. */
@@ -212,17 +214,15 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
 
   /** A new sea the size of the window, at the start. */
   function layout(): void {
-    setWidth(normalWidth())
     const dpr = Math.min(2, window.devicePixelRatio || 1)
     canvas.width = Math.round(Math.max(1, host.clientWidth) * dpr)
     canvas.height = Math.round(Math.max(1, host.clientHeight) * dpr)
     // The sea spans the window's width; as deep as the window is tall, at that scale.
-    scale = canvas.width / WIDTH
-    seaWidth = WIDTH
-    sea = createSea(Math.round(canvas.height / scale))
+    const width = normalWidth()
+    scale = canvas.width / width
+    sea = createSea(width, Math.round(canvas.height / scale))
     rules()
     water()
-    if (settings.observe !== null) observe(settings.observe)
   }
 
   /**
@@ -237,7 +237,7 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
     if (width === canvas.width && height === canvas.height) return
     canvas.width = width
     canvas.height = height
-    scale = width / seaWidth
+    scale = width / sea.w
     const depth = Math.round(height / scale)
     shift(sea, 0, (depth - sea.h) / 2)
     sea.h = depth
@@ -252,9 +252,8 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
   function rezoom(): void {
     const width = normalWidth()
     const depth = Math.round((canvas.height * width) / canvas.width)
-    shift(sea, (width - seaWidth) / 2, (depth - sea.h) / 2)
-    seaWidth = width
-    setWidth(width)
+    shift(sea, (width - sea.w) / 2, (depth - sea.h) / 2)
+    sea.w = width
     sea.h = depth
     scale = canvas.width / width
     water()
@@ -262,7 +261,7 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
 
   /** Where the camera looks when watching: the middle of the body, or of the school. */
   function focusOf(a: Animal): Point {
-    if (a.fish.length > 0) return { x: a.fish.reduce((t, f) => t + f.x, 0) / a.fish.length, y: a.fish.reduce((t, f) => t + f.y, 0) / a.fish.length }
+    if (a.fish.length > 0) return middleOf(a.fish)
     const frames = spineOf(a)
     return frames[Math.floor(frames.length * 0.45)] ?? a
   }
@@ -271,9 +270,8 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
   function observe(name: Kind['name'] | null): void {
     if (name === null) {
       watch = undefined
-      setWidth(seaWidth)
       // The distance may have changed while watching.
-      if (seaWidth !== normalWidth()) {
+      if (sea.w !== normalWidth()) {
         rezoom()
         return
       }
@@ -282,8 +280,7 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
       const k = KINDS[kind]!
       // Its own sea, wide enough that it roams freely even seen from furthest off.
       const world = Math.max(framing(k, 3) * 4, 4000)
-      setWidth(world)
-      const own = createSea(Math.round((world * canvas.height) / canvas.width))
+      const own = createSea(world, Math.round((world * canvas.height) / canvas.width))
       const a = place(own, kind)
       a.depth = a.dive = depthOf(settings.level)
       const focus = focusOf(a)
@@ -330,35 +327,6 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
     }
   }
 
-  /**
-   * The moon caught on ripples at the surface, over everything: brief glints here and there, fixed in the water. Each
-   * patch of water sparks now and then at its own rhythm. In the mosaic, a glint lights a tile.
-   */
-  function glints(v: ReturnType<typeof view>): void {
-    const g = 90
-    const size = settings.cell * scale
-    ctx.setTransform(1, 0, 0, 1, 0, 0)
-    const right = v.left + canvas.width / v.s
-    const bottom = v.top + canvas.height / v.s
-    for (let gx = Math.floor(v.left / g); gx * g < right; gx += 1) {
-      for (let gy = Math.floor(v.top / g); gy * g < bottom; gy += 1) {
-        const rand = rng(Math.imul(gx, 83492791) ^ Math.imul(gy, 2654435761))
-        const spark = Math.sin(clock * (0.8 + rand() * 1.2) + rand() * 7)
-        if (spark < 0.97) continue
-        const x = ((gx + rand()) * g - v.left) * v.s
-        const y = ((gy + rand()) * g - v.top) * v.s
-        const glow = (spark - 0.97) / 0.03
-        if (settings.style === 'mosaic') {
-          ctx.fillStyle = `rgba(214,226,236,${0.35 * glow})`
-          ctx.fillRect(Math.floor(x / size) * size, Math.floor(y / size) * size, size, size)
-        } else {
-          ctx.fillStyle = `rgba(214,226,236,${0.7 * glow})`
-          ctx.fillRect(x - 5 * v.s, y - 0.8 * v.s, 10 * v.s, 1.6 * v.s)
-        }
-      }
-    }
-  }
-
   /** The still water, drawn once for each theme, style and tile: in the mosaic, a faint grid and a few dashes. */
   function water(): void {
     const cell = settings.cell
@@ -368,6 +336,7 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
     rows = Math.ceil(canvas.height / (cell * scale))
     low.width = cols
     low.height = rows
+    deep = new Float32Array(cols * rows)
     still.width = canvas.width
     still.height = canvas.height
     const sctx = still.getContext('2d')!
@@ -415,10 +384,17 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
     const k = KINDS[a.kind]!
     const discs = discsOf(a)
     const pad = (k.reach + 20) * s + blur * 2 + 2
-    const x0 = Math.max(0, Math.floor(Math.min(...discs.map(d => (d.x - d.r - left) * s)) - pad))
-    const y0 = Math.max(0, Math.floor(Math.min(...discs.map(d => (d.y - d.r - top) * s)) - pad))
-    const x1 = Math.min(width, Math.ceil(Math.max(...discs.map(d => (d.x + d.r - left) * s)) + pad))
-    const y1 = Math.min(height, Math.ceil(Math.max(...discs.map(d => (d.y + d.r - top) * s)) + pad))
+    let [l, t, r, b] = [Infinity, Infinity, -Infinity, -Infinity]
+    for (const d of discs) {
+      l = Math.min(l, d.x - d.r)
+      t = Math.min(t, d.y - d.r)
+      r = Math.max(r, d.x + d.r)
+      b = Math.max(b, d.y + d.r)
+    }
+    const x0 = Math.max(0, Math.floor((l - left) * s - pad))
+    const y0 = Math.max(0, Math.floor((t - top) * s - pad))
+    const x1 = Math.min(width, Math.ceil((r - left) * s + pad))
+    const y1 = Math.min(height, Math.ceil((b - top) * s + pad))
     if (x1 <= x0 || y1 <= y0) return undefined
     const [w, h] = [x1 - x0, y1 - y0]
     c.setTransform(1, 0, 0, 1, 0, 0)
@@ -474,7 +450,6 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
     if (settings.style === 'smooth') {
       const c = layer.getContext('2d')!
       for (const a of animals) lay(ctx, c, a, 0, v.s, v.left, v.top, Math.max(0, a.depth - 0.25) * BLUR * v.s)
-      if (settings.surface && settings.theme === 'dark') glints(v)
       return
     }
     // The tiles keep their size on screen whatever the framing: closer in, a tile covers less of the animal.
@@ -482,7 +457,7 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
     lctx.setTransform(1, 0, 0, 1, 0, 0)
     lctx.clearRect(0, 0, cols, rows)
     // How deep the body lighting each tile swims: the shallowest over it, as it is drawn last.
-    const deep = new Float32Array(cols * rows)
+    deep.fill(0)
     for (const a of animals) {
       const box = lay(lctx, lowLayerCtx, a, tu, 1 / tu, v.left, v.top, 0)
       if (box === undefined) continue
@@ -508,20 +483,19 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
         const x = c * size
         const y = r * size
         ctx.globalAlpha = 1 - deep[r * cols + c]! * CLEAR
-        ctx.fillStyle = `rgb(${cr * shade},${cg * shade},${cb * shade})`
+        ctx.fillStyle = rgb(cr * shade, cg * shade, cb * shade)
         ctx.fillRect(x + inset, y + inset, size - 2 * inset, size - 2 * inset)
         const g = tiles.glyph[tile]!
         if (g !== '' && size >= 6) {
           // The glyph cut into the tile: a darker shade of it on the night sea, a lighter one in pale water.
           ctx.fillStyle = light
-            ? `rgb(${cr + (255 - cr) * GLYPH_LIFT},${cg + (255 - cg) * GLYPH_LIFT},${cb + (255 - cb) * GLYPH_LIFT})`
-            : `rgb(${cr * GLYPH_INK},${cg * GLYPH_INK},${cb * GLYPH_INK})`
+            ? rgb(cr + (255 - cr) * GLYPH_LIFT, cg + (255 - cg) * GLYPH_LIFT, cb + (255 - cb) * GLYPH_LIFT)
+            : rgb(cr * GLYPH_INK, cg * GLYPH_INK, cb * GLYPH_INK)
           ctx.fillText(g, x + size / 2, y + size / 2 + size * 0.04)
         }
       }
     }
     ctx.globalAlpha = 1
-    if (settings.surface && settings.theme === 'dark') glints(v)
   }
 
   layout()
@@ -557,12 +531,9 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
     if (stepped) paint()
     frame = requestAnimationFrame(tick)
   }
-  // Still: some seconds in, so a few animals are in view, and no motion.
-  const settle = (): void => {
-    if (reduced.matches) for (let i = 0; i < 1500; i += 1) stepSea(sea, STEP, MARGIN)
-  }
   if (reduced.matches) {
-    settle()
+    // Still: some seconds in, so a few animals are in view, and no motion.
+    for (let i = 0; i < 1500; i += 1) stepSea(sea, STEP, MARGIN)
     paint()
   } else {
     paint()

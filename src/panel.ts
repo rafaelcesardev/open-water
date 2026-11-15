@@ -7,7 +7,7 @@
 // mosaic or smooth, how far off, the tile) and time (pause in the header, speed).
 // Keys: space pauses, H hides the panel, the arrows step through the animals while watching, Esc back to the sea.
 
-import { KINDS, type Kind } from './sim'
+import { KINDS, type Kind } from './sim.ts'
 
 export type Settings = {
   theme: 'dark' | 'light'
@@ -27,7 +27,7 @@ export type Settings = {
   observe: Kind['name'] | null
   /** The level the watched animal swims at: 1 under the surface, 2 midwater, 3 deep. */
   level: 1 | 2 | 3
-  /** Light from the surface: caustics, and the moon glinting at night. */
+  /** Light from the surface: caustics rippling over the animals. */
   surface: boolean
 }
 

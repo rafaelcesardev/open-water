@@ -8,8 +8,7 @@ function stepSchool(s, animals, dt, random) {
   const near2 = bl * 1.1;
   const along = bl * 3.5;
   const around = bl * 5;
-  const cx = fish.reduce((t, f) => t + f.x, 0) / fish.length;
-  const cy = fish.reduce((t, f) => t + f.y, 0) / fish.length;
+  const { x: cx, y: cy } = middleOf(fish);
   const threats = [];
   for (const o of animals) {
     if (o === s || KINDS[o.kind].plan === "school" || apart(s, o)) continue;
@@ -46,9 +45,9 @@ function stepSchool(s, animals, dt, random) {
       ay += g.vy;
       n += 1;
       if (d2 > near2 * near2 || d2 === 0) continue;
-      const d3 = Math.sqrt(d2);
-      sx -= dx / d3 * (1 - d3 / near2);
-      sy -= dy / d3 * (1 - d3 / near2);
+      const d = Math.sqrt(d2);
+      sx -= dx / d * (1 - d / near2);
+      sy -= dy / d * (1 - d / near2);
     }
     let wx = 0;
     let wy = 0;
@@ -76,19 +75,16 @@ function stepSchool(s, animals, dt, random) {
     for (const c of threats) {
       const dx = f.x - c.x;
       const dy = f.y - c.y;
-      const d2 = Math.hypot(dx, dy) || 1;
-      if (d2 >= c.r) continue;
-      const push = 1 - d2 / c.r;
-      wx += dx / d2 * push * 6;
-      wy += dy / d2 * push * 6;
+      const d = Math.hypot(dx, dy) || 1;
+      if (d >= c.r) continue;
+      const push = 1 - d / c.r;
+      wx += dx / d * push * 6;
+      wy += dy / d * push * 6;
       fear = Math.max(fear, push);
     }
     const heading = Math.atan2(f.vy, f.vx);
     const want = Math.atan2(wy, wx);
-    let d = (want - heading) % (Math.PI * 2);
-    if (d > Math.PI) d -= Math.PI * 2;
-    if (d < -Math.PI) d += Math.PI * 2;
-    const turn = Math.max(-TURN * dt, Math.min(TURN * dt, d));
+    const turn = Math.max(-TURN * dt, Math.min(TURN * dt, turnTo(heading, want)));
     const target = cruise * (1 + fear * (k.sprint - 1)) * (0.95 + random() * 0.1);
     const was = Math.hypot(f.vx, f.vy);
     const speed = was + (target - was) * Math.min(1, dt * (target > was ? 6 : 1.5));
@@ -132,10 +128,6 @@ var KINDS = [
   // go one way; it parts round anything big and closes again.
   { name: "jacks", plan: "school", length: 0.6 * M, girth: 4, widest: 0, snout: 0, fin: 0, reach: 260, speed: 55, beat: 0.5, turn: 3.5, trunk: 1, sway: 0.1, surge: 0, sprint: 3, whim: 1, stay: [30, 70], prey: [], levels: [1, 2] }
 ];
-var WIDTH = 1600;
-function setWidth(width) {
-  WIDTH = width;
-}
 var STEP = 10;
 var clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 var turnTo = (heading, target) => {
@@ -206,8 +198,17 @@ function discsOf(a) {
   if (last !== void 0 && k.trunk < 1) discs.push({ x: last.x - last.fx * k.length * (1 - k.trunk) * 0.6, y: last.y - last.fy * k.length * (1 - k.trunk) * 0.6, r: k.length * (1 - k.trunk) * 0.6 });
   return discs;
 }
+function middleOf(fish) {
+  let x = 0;
+  let y = 0;
+  for (const f of fish) {
+    x += f.x;
+    y += f.y;
+  }
+  return { x: x / fish.length, y: y / fish.length };
+}
 function tailOf(a) {
-  if (a.fish.length > 0) return { x: a.fish.reduce((s, f) => s + f.x, 0) / a.fish.length, y: a.fish.reduce((s, f) => s + f.y, 0) / a.fish.length };
+  if (a.fish.length > 0) return middleOf(a.fish);
   const k = KINDS[a.kind];
   let behind = 0;
   let last = a;
@@ -218,8 +219,8 @@ function tailOf(a) {
   }
   return last;
 }
-function createSea(h) {
-  return { h, animals: [], next: 0, gone: -1, chases: 0, atOnce: 4, allowed: new Set(KINDS.map((_, i) => i)) };
+function createSea(w, h) {
+  return { w, h, animals: [], next: 0, gone: -1, atOnce: 4, allowed: new Set(KINDS.map((_, i) => i)) };
 }
 var depthOf = (level) => (level - 1) / 2;
 var deepIn = (k, random) => depthOf(k.levels[Math.floor(random() * k.levels.length)]);
@@ -240,7 +241,7 @@ function make(kind, x, y, heading, to, random) {
 }
 function place(sea, kind, random = Math.random) {
   const heading = random() * Math.PI * 2;
-  const a = make(kind, WIDTH / 2, sea.h / 2, heading, { x: WIDTH / 2, y: sea.h / 2 }, random);
+  const a = make(kind, sea.w / 2, sea.h / 2, heading, { x: sea.w / 2, y: sea.h / 2 }, random);
   Object.assign(a, { mode: "roam", stay: Infinity, seen: true });
   sea.animals = [a];
   sea.next = Infinity;
@@ -258,9 +259,9 @@ function arrive(sea, random) {
     const edge2 = Math.floor(random() * 4);
     const along = 0.1 + random() * 0.8;
     const off = 20 + k.reach + random() * 120;
-    const x = edge2 === 0 ? -off : edge2 === 1 ? WIDTH + off : along * WIDTH;
+    const x = edge2 === 0 ? -off : edge2 === 1 ? sea.w + off : along * sea.w;
     const y = edge2 === 2 ? -off : edge2 === 3 ? sea.h + off : along * sea.h;
-    const to = { x: WIDTH * (0.2 + random() * 0.6), y: sea.h * (0.2 + random() * 0.6) };
+    const to = { x: sea.w * (0.2 + random() * 0.6), y: sea.h * (0.2 + random() * 0.6) };
     const heading = Math.atan2(to.y - y, to.x - x);
     const path = [];
     for (let d = -k.length; d <= k.length; d += 40) path.push({ x: x + Math.cos(heading) * d, y: y + Math.sin(heading) * d });
@@ -286,12 +287,12 @@ function shift(sea, dx, dy) {
   }
 }
 function stepSea(sea, dt, tile, random = Math.random) {
-  const inView = (p, margin) => p.x > -margin && p.x < WIDTH + margin && p.y > -margin && p.y < sea.h + margin;
+  const inView = (p, margin) => p.x > -margin && p.x < sea.w + margin && p.y > -margin && p.y < sea.h + margin;
   sea.animals = sea.animals.filter((a) => {
     a.age += dt;
     const discs = discsOf(a);
     if (!a.seen && discs.some((c) => inView(c, -c.r * 0.5))) a.seen = true;
-    const gone = a.seen && discs.every((c) => !inView(c, c.r + tile)) || !a.seen && a.age > 40;
+    const gone = a.stay < Infinity && (a.seen && discs.every((c) => !inView(c, c.r + tile)) || !a.seen && a.age > 40);
     if (gone) {
       sea.gone = a.kind;
       for (const o of sea.animals) if (o.prey === a) o.prey = void 0;
@@ -341,12 +342,12 @@ function stepSea(sea, dt, tile, random = Math.random) {
       s.curve *= 0.98;
     } else if (s.mode === "enter" || s.mode === "return") {
       steer(s.to);
-      if (s.x > 160 && s.x < WIDTH - 160 && s.y > 140 && s.y < sea.h - 140) s.mode = "roam";
+      if (s.x > 160 && s.x < sea.w - 160 && s.y > 140 && s.y < sea.h - 140) s.mode = "roam";
     } else if (s.stay <= 0) {
       s.mode = "leave";
     } else if (!inView(s, 110)) {
       s.mode = "return";
-      s.to = { x: WIDTH * (0.15 + random() * 0.7), y: sea.h * (0.2 + random() * 0.6) };
+      s.to = { x: sea.w * (0.15 + random() * 0.7), y: sea.h * (0.2 + random() * 0.6) };
     } else {
       if (s.tight > 0) {
         s.tight -= step;
@@ -377,7 +378,6 @@ function stepSea(sea, dt, tile, random = Math.random) {
             s.mode = "chase";
             s.prey = prey;
             s.modeFor = 4 + random() * 3;
-            sea.chases += 1;
             break;
           }
         }
@@ -2330,6 +2330,7 @@ function rng(seed) {
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   };
 }
+var rgb = (r, g, b) => `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
 function tileTable() {
   const rand = rng(7);
   const shade = [];
@@ -2401,7 +2402,6 @@ function mountOpenWater(host, options = {}) {
   }
   const darkWater = options.background ?? "#191919";
   const normalWidth = () => 1600 * Math.max(0.5, settings.zoomOut);
-  setWidth(normalWidth());
   const tiles = tileTable();
   const canvas = document.createElement("canvas");
   canvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block";
@@ -2421,24 +2421,22 @@ function mountOpenWater(host, options = {}) {
   let scale = 1;
   let cols = 0;
   let rows = 0;
+  let deep = new Float32Array(0);
   let watch;
-  let seaWidth = 0;
   let panel;
   function rules() {
     sea.atOnce = settings.atOnce;
     sea.allowed = new Set(KINDS.flatMap((k, i) => settings.species.includes(k.name) ? [i] : []));
   }
   function layout() {
-    setWidth(normalWidth());
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     canvas.width = Math.round(Math.max(1, host.clientWidth) * dpr);
     canvas.height = Math.round(Math.max(1, host.clientHeight) * dpr);
-    scale = canvas.width / WIDTH;
-    seaWidth = WIDTH;
-    sea = createSea(Math.round(canvas.height / scale));
+    const width = normalWidth();
+    scale = canvas.width / width;
+    sea = createSea(width, Math.round(canvas.height / scale));
     rules();
     water();
-    if (settings.observe !== null) observe(settings.observe);
   }
   function resize() {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -2447,7 +2445,7 @@ function mountOpenWater(host, options = {}) {
     if (width === canvas.width && height === canvas.height) return;
     canvas.width = width;
     canvas.height = height;
-    scale = width / seaWidth;
+    scale = width / sea.w;
     const depth = Math.round(height / scale);
     shift(sea, 0, (depth - sea.h) / 2);
     sea.h = depth;
@@ -2456,23 +2454,21 @@ function mountOpenWater(host, options = {}) {
   function rezoom() {
     const width = normalWidth();
     const depth = Math.round(canvas.height * width / canvas.width);
-    shift(sea, (width - seaWidth) / 2, (depth - sea.h) / 2);
-    seaWidth = width;
-    setWidth(width);
+    shift(sea, (width - sea.w) / 2, (depth - sea.h) / 2);
+    sea.w = width;
     sea.h = depth;
     scale = canvas.width / width;
     water();
   }
   function focusOf(a) {
-    if (a.fish.length > 0) return { x: a.fish.reduce((t, f) => t + f.x, 0) / a.fish.length, y: a.fish.reduce((t, f) => t + f.y, 0) / a.fish.length };
+    if (a.fish.length > 0) return middleOf(a.fish);
     const frames = spineOf(a);
     return frames[Math.floor(frames.length * 0.45)] ?? a;
   }
   function observe(name) {
     if (name === null) {
       watch = void 0;
-      setWidth(seaWidth);
-      if (seaWidth !== normalWidth()) {
+      if (sea.w !== normalWidth()) {
         rezoom();
         return;
       }
@@ -2480,8 +2476,7 @@ function mountOpenWater(host, options = {}) {
       const kind = KINDS.findIndex((k2) => k2.name === name);
       const k = KINDS[kind];
       const world = Math.max(framing(k, 3) * 4, 4e3);
-      setWidth(world);
-      const own = createSea(Math.round(world * canvas.height / canvas.width));
+      const own = createSea(world, Math.round(world * canvas.height / canvas.width));
       const a = place(own, kind);
       a.depth = a.dive = depthOf(settings.level);
       const focus = focusOf(a);
@@ -2516,30 +2511,6 @@ function mountOpenWater(host, options = {}) {
       }
     }
   }
-  function glints(v) {
-    const g = 90;
-    const size = settings.cell * scale;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    const right = v.left + canvas.width / v.s;
-    const bottom = v.top + canvas.height / v.s;
-    for (let gx = Math.floor(v.left / g); gx * g < right; gx += 1) {
-      for (let gy = Math.floor(v.top / g); gy * g < bottom; gy += 1) {
-        const rand = rng(Math.imul(gx, 83492791) ^ Math.imul(gy, 2654435761));
-        const spark = Math.sin(clock * (0.8 + rand() * 1.2) + rand() * 7);
-        if (spark < 0.97) continue;
-        const x = ((gx + rand()) * g - v.left) * v.s;
-        const y = ((gy + rand()) * g - v.top) * v.s;
-        const glow = (spark - 0.97) / 0.03;
-        if (settings.style === "mosaic") {
-          ctx.fillStyle = `rgba(214,226,236,${0.35 * glow})`;
-          ctx.fillRect(Math.floor(x / size) * size, Math.floor(y / size) * size, size, size);
-        } else {
-          ctx.fillStyle = `rgba(214,226,236,${0.7 * glow})`;
-          ctx.fillRect(x - 5 * v.s, y - 0.8 * v.s, 10 * v.s, 1.6 * v.s);
-        }
-      }
-    }
-  }
   function water() {
     const cell = settings.cell;
     const light = settings.theme === "light";
@@ -2547,6 +2518,7 @@ function mountOpenWater(host, options = {}) {
     rows = Math.ceil(canvas.height / (cell * scale));
     low.width = cols;
     low.height = rows;
+    deep = new Float32Array(cols * rows);
     still.width = canvas.width;
     still.height = canvas.height;
     const sctx = still.getContext("2d");
@@ -2587,10 +2559,17 @@ function mountOpenWater(host, options = {}) {
     const k = KINDS[a.kind];
     const discs = discsOf(a);
     const pad = (k.reach + 20) * s + blur * 2 + 2;
-    const x0 = Math.max(0, Math.floor(Math.min(...discs.map((d) => (d.x - d.r - left) * s)) - pad));
-    const y0 = Math.max(0, Math.floor(Math.min(...discs.map((d) => (d.y - d.r - top) * s)) - pad));
-    const x1 = Math.min(width, Math.ceil(Math.max(...discs.map((d) => (d.x + d.r - left) * s)) + pad));
-    const y1 = Math.min(height, Math.ceil(Math.max(...discs.map((d) => (d.y + d.r - top) * s)) + pad));
+    let [l, t, r, b] = [Infinity, Infinity, -Infinity, -Infinity];
+    for (const d of discs) {
+      l = Math.min(l, d.x - d.r);
+      t = Math.min(t, d.y - d.r);
+      r = Math.max(r, d.x + d.r);
+      b = Math.max(b, d.y + d.r);
+    }
+    const x0 = Math.max(0, Math.floor((l - left) * s - pad));
+    const y0 = Math.max(0, Math.floor((t - top) * s - pad));
+    const x1 = Math.min(width, Math.ceil((r - left) * s + pad));
+    const y1 = Math.min(height, Math.ceil((b - top) * s + pad));
     if (x1 <= x0 || y1 <= y0) return void 0;
     const [w, h] = [x1 - x0, y1 - y0];
     c.setTransform(1, 0, 0, 1, 0, 0);
@@ -2641,13 +2620,12 @@ function mountOpenWater(host, options = {}) {
     if (settings.style === "smooth") {
       const c = layer.getContext("2d");
       for (const a of animals) lay(ctx, c, a, 0, v.s, v.left, v.top, Math.max(0, a.depth - 0.25) * BLUR * v.s);
-      if (settings.surface && settings.theme === "dark") glints(v);
       return;
     }
     const tu = cell * scale / v.s;
     lctx.setTransform(1, 0, 0, 1, 0, 0);
     lctx.clearRect(0, 0, cols, rows);
-    const deep = new Float32Array(cols * rows);
+    deep.fill(0);
     for (const a of animals) {
       const box = lay(lctx, lowLayerCtx, a, tu, 1 / tu, v.left, v.top, 0);
       if (box === void 0) continue;
@@ -2672,17 +2650,16 @@ function mountOpenWater(host, options = {}) {
         const x = c * size;
         const y = r * size;
         ctx.globalAlpha = 1 - deep[r * cols + c] * CLEAR;
-        ctx.fillStyle = `rgb(${cr * shade},${cg * shade},${cb * shade})`;
+        ctx.fillStyle = rgb(cr * shade, cg * shade, cb * shade);
         ctx.fillRect(x + inset, y + inset, size - 2 * inset, size - 2 * inset);
         const g = tiles.glyph[tile];
         if (g !== "" && size >= 6) {
-          ctx.fillStyle = light ? `rgb(${cr + (255 - cr) * GLYPH_LIFT},${cg + (255 - cg) * GLYPH_LIFT},${cb + (255 - cb) * GLYPH_LIFT})` : `rgb(${cr * GLYPH_INK},${cg * GLYPH_INK},${cb * GLYPH_INK})`;
+          ctx.fillStyle = light ? rgb(cr + (255 - cr) * GLYPH_LIFT, cg + (255 - cg) * GLYPH_LIFT, cb + (255 - cb) * GLYPH_LIFT) : rgb(cr * GLYPH_INK, cg * GLYPH_INK, cb * GLYPH_INK);
           ctx.fillText(g, x + size / 2, y + size / 2 + size * 0.04);
         }
       }
     }
     ctx.globalAlpha = 1;
-    if (settings.surface && settings.theme === "dark") glints(v);
   }
   layout();
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -2713,11 +2690,8 @@ function mountOpenWater(host, options = {}) {
     if (stepped) paint();
     frame = requestAnimationFrame(tick);
   };
-  const settle = () => {
-    if (reduced.matches) for (let i = 0; i < 1500; i += 1) stepSea(sea, STEP3, MARGIN);
-  };
   if (reduced.matches) {
-    settle();
+    for (let i = 0; i < 1500; i += 1) stepSea(sea, STEP3, MARGIN);
     paint();
   } else {
     paint();

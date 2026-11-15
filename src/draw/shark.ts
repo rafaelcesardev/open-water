@@ -2,8 +2,8 @@
 // pelvic fins, the first dorsal as a dark ridge, the eyes; a hammerhead's cephalofoil, a tiger's bars, a blacktip's
 // black fin tips. Colours are the real dorsal colours, dark along the back and paler toward the flanks.
 
-import { KINDS, spineOf, type Animal, type Frame } from '../sim'
-import { EYE, at, near as nearest, outline, type Ctx } from './common'
+import { KINDS, spineOf, type Animal, type Frame } from '../sim.ts'
+import { EYE, at, near as nearest, outline, type Ctx } from './common.ts'
 
 type Look = { fringe: string; flank: string; back: string; bar?: string; tips?: string }
 
