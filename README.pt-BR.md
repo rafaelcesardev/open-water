@@ -28,12 +28,12 @@ Um mar escuro visto de cima, ao vivo, e os animais que passam por ele no tamanho
 
 ## Controles
 
-Um painel flutuante à direita, de vidro fosco transparente (os animais aparecem passando por trás). No topo, quantos animais estão na tela, o botão de tema (sol para o claro, lua para o escuro) e o de pausa. Logo abaixo, os dois modos:
+Um painel flutuante à direita, de vidro fosco transparente (os animais aparecem passando por trás). O painel é em inglês; abaixo, cada controle vem com o nome que aparece nele entre parênteses. No topo, quantos animais estão na tela, o botão de tema (sol para o claro, lua para o escuro) e o de pausa. Logo abaixo, os dois modos:
 
-- **Mar aberto:** os animais entram e saem. Escolha quantos podem aparecer de uma vez (− 1 a 8 +) e quais espécies podem entrar, em botões agrupados (Tubarões, Mamíferos, Outros), com um ponto verde em quem está na tela agora. Desligar uma espécie, ou diminuir o número, faz os que sobram irem embora nadando, sem sumir de repente.
-- **Observar:** um animal sozinho, para avaliar formato e movimento. Ele continua nadando, virando e acelerando como sempre, mas a câmera o acompanha e o mantém no meio da área livre. Partículas na água passam por ele e mostram o deslocamento. Os cartões mostram o tamanho real de cada um, e as setas ‹ › passam para o próximo animal. Em Profundidade (Raso, Meio, Fundo) se escolhe o nível dele; ao trocar, ele sobe ou desce até lá, devagar.
+- **Mar aberto** (Open sea): os animais entram e saem. Escolha quantos podem aparecer de uma vez (− 1 a 8 +) e quais espécies podem entrar, em botões agrupados (Sharks, Mammals, Others), com um ponto verde em quem está na tela agora. Desligar uma espécie, ou diminuir o número, faz os que sobram irem embora nadando, sem sumir de repente.
+- **Observar** (Watch): um animal sozinho, para avaliar formato e movimento. Ele continua nadando, virando e acelerando como sempre, mas a câmera o acompanha e o mantém no meio da área livre. Partículas na água passam por ele e mostram o deslocamento. Os cartões mostram o tamanho real de cada um, e as setas ‹ › passam para o próximo animal. Em Profundidade (Depth: Shallow, Mid, Deep) se escolhe o nível dele; ao trocar, ele sobe ou desce até lá, devagar.
 
-Valem para os dois modos: mosaico ou liso, luz da superfície ligada ou não, distância (perto ou longe), tamanho do ladrilho do mosaico, grade sobre a água ou água lisa (só no mosaico) e velocidade (0,5×, 1×, 2×).
+Valem para os dois modos: mosaico ou liso (Style), luz da superfície ligada ou não (Surface), distância (Distance), tamanho do ladrilho do mosaico (Mosaic tile), grade sobre a água ou água lisa, só no mosaico (Grid), e velocidade (Speed: 0.5×, 1×, 2×).
 
 Atalhos: `Espaço` pausa, `H` esconde o painel, `←` `→` trocam o animal observado, `Esc` volta ao mar aberto.
 

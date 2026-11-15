@@ -35,31 +35,31 @@ export type Settings = {
 
 type Name = Kind['name']
 
-/** Each kind: its short name in Portuguese, its full name, and a dot of its real colour. */
+/** Each kind: its short name, its full name, and a dot of its real colour. */
 const LABELS: Record<Name, [string, string, string]> = {
-  white: ['Branco', 'Tubarão-branco', '#7b8388'],
-  hammer: ['Martelo', 'Tubarão-martelo', '#88877a'],
-  tiger: ['Tigre', 'Tubarão-tigre', '#7b8580'],
-  blacktip: ['Galha-preta', 'Galha-preta', '#8b877b'],
-  blue: ['Baleia-azul', 'Baleia-azul', '#6d8799'],
+  white: ['Great white', 'Great white shark', '#7b8388'],
+  hammer: ['Hammerhead', 'Hammerhead shark', '#88877a'],
+  tiger: ['Tiger', 'Tiger shark', '#7b8580'],
+  blacktip: ['Blacktip', 'Blacktip shark', '#8b877b'],
+  blue: ['Blue whale', 'Blue whale', '#6d8799'],
   orca: ['Orca', 'Orca', '#2a2d31'],
-  dolphin: ['Golfinho', 'Golfinho', '#7d858c'],
-  turtle: ['Tartaruga', 'Tartaruga-verde', '#8a7a50'],
-  manta: ['Manta', 'Manta', '#33373c'],
-  squid: ['Lula-gigante', 'Lula-gigante', '#8a3a33'],
-  jacks: ['Xaréus', 'Cardume', '#a3afb5'],
+  dolphin: ['Dolphin', 'Dolphin', '#7d858c'],
+  turtle: ['Turtle', 'Green turtle', '#8a7a50'],
+  manta: ['Manta', 'Manta ray', '#33373c'],
+  squid: ['Giant squid', 'Giant squid', '#8a3a33'],
+  jacks: ['Jacks', 'School of jacks', '#a3afb5'],
 }
 const GROUPS: [string, Name[]][] = [
-  ['Tubarões', ['white', 'hammer', 'tiger', 'blacktip']],
-  ['Mamíferos', ['blue', 'orca', 'dolphin']],
-  ['Outros', ['turtle', 'manta', 'squid', 'jacks']],
+  ['Sharks', ['white', 'hammer', 'tiger', 'blacktip']],
+  ['Mammals', ['blue', 'orca', 'dolphin']],
+  ['Others', ['turtle', 'manta', 'squid', 'jacks']],
 ]
 const ORDER: Name[] = GROUPS.flatMap(([, names]) => names)
 
-const metres = (n: number): string => `${n.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} m`
+const metres = (n: number): string => `${n.toLocaleString('en', { maximumFractionDigits: 1 })} m`
 const sizeOf = (name: Name): string => {
   const k = KINDS.find(x => x.name === name)!
-  return k.plan === 'school' ? `${metres(k.length / 80)} cada` : metres(k.length / 80)
+  return k.plan === 'school' ? `${metres(k.length / 80)} each` : metres(k.length / 80)
 }
 
 const icon = (path: string, size = 18): string =>
@@ -261,62 +261,62 @@ export function mountPanel(
 
   shadow.innerHTML = `<style>${CSS}</style>
   <div class="wrap">
-    <div class="panel glass" id="panel" role="region" aria-label="Controles do Open Water">
+    <div class="panel glass" id="panel" role="region" aria-label="Open Water controls">
       <header>
         <div class="title"><h1>Open Water</h1><div class="status" aria-live="polite"><span class="pulse"></span><span data-status></span></div></div>
         <button type="button" class="icon" data-theme-toggle></button>
         <button type="button" class="icon" data-pause></button>
-        <button type="button" class="icon" data-collapse aria-label="Esconder controles (H)" title="Esconder (H)" aria-controls="panel">${ICONS.hide}</button>
+        <button type="button" class="icon" data-collapse aria-label="Hide controls (H)" title="Hide (H)" aria-controls="panel">${ICONS.hide}</button>
       </header>
-      <div class="modes" role="group" aria-label="Modo">
-        <button type="button" data-mode="sea">Mar aberto</button>
-        <button type="button" data-mode="watch">${ICONS.eye}Observar</button>
+      <div class="modes" role="group" aria-label="Mode">
+        <button type="button" data-mode="sea">Open sea</button>
+        <button type="button" data-mode="watch">${ICONS.eye}Watch</button>
       </div>
 
       <div class="page" id="page-sea">
         <div class="block">
-          <div class="label"><span>Animais por vez</span><span class="hint">o cardume conta como 1</span></div>
-          <div class="stepper"><button type="button" class="icon" data-less aria-label="Menos animais">${ICONS.minus}</button><output data-count aria-live="polite"></output><button type="button" class="icon" data-more aria-label="Mais animais">${ICONS.plus}</button></div>
+          <div class="label"><span>Animals at once</span><span class="hint">the school counts as 1</span></div>
+          <div class="stepper"><button type="button" class="icon" data-less aria-label="Fewer animals">${ICONS.minus}</button><output data-count aria-live="polite"></output><button type="button" class="icon" data-more aria-label="More animals">${ICONS.plus}</button></div>
         </div>
         <div class="block">
-          <div class="label"><span>Espécies que aparecem</span><span class="links"><button type="button" data-all>Todas</button><button type="button" data-none>Nenhuma</button></span></div>
-          ${GROUPS.map(([group, names]) => `<div class="group">${group}</div><div class="chips">${names.map(n => `<button type="button" class="chip" data-kind="${n}" title="${LABELS[n][1]}">${dot(n)}<span class="name">${LABELS[n][0]}</span><span class="here" data-here="${n}" title="Na tela agora"></span></button>`).join('')}</div>`).join('')}
+          <div class="label"><span>Species that appear</span><span class="links"><button type="button" data-all>All</button><button type="button" data-none>None</button></span></div>
+          ${GROUPS.map(([group, names]) => `<div class="group">${group}</div><div class="chips">${names.map(n => `<button type="button" class="chip" data-kind="${n}" title="${LABELS[n][1]}">${dot(n)}<span class="name">${LABELS[n][0]}</span><span class="here" data-here="${n}" title="On screen now"></span></button>`).join('')}</div>`).join('')}
         </div>
       </div>
 
       <div class="page" id="page-watch">
         <div class="watching">
           <div class="row">
-            <button type="button" class="icon" data-step="-1" aria-label="Animal anterior (←)" title="Anterior (←)">${ICONS.prev}</button>
+            <button type="button" class="icon" data-step="-1" aria-label="Previous animal (←)" title="Previous (←)">${ICONS.prev}</button>
             <div class="who"><b data-who></b><span data-who-size></span></div>
-            <button type="button" class="icon" data-step="1" aria-label="Próximo animal (→)" title="Próximo (→)">${ICONS.next}</button>
+            <button type="button" class="icon" data-step="1" aria-label="Next animal (→)" title="Next (→)">${ICONS.next}</button>
           </div>
         </div>
-        <div class="block pair"><span>Profundidade</span>${seg('level', 'Profundidade', [['1', 'Raso'], ['2', 'Meio'], ['3', 'Fundo']])}</div>
+        <div class="block pair"><span>Depth</span>${seg('level', 'Depth', [['1', 'Shallow'], ['2', 'Mid'], ['3', 'Deep']])}</div>
         <div class="cards block">${ORDER.map(n => `<button type="button" class="card" data-watch="${n}" title="${LABELS[n][1]}">${dot(n)}<span class="name">${LABELS[n][0]}</span><span class="size">${sizeOf(n)}</span></button>`).join('')}</div>
       </div>
 
       <div class="shared">
-        <div class="section">Visualização</div>
-        <div class="block pair"><span>Estilo</span>${seg('style', 'Estilo', [['mosaic', 'Mosaico'], ['smooth', 'Liso']])}</div>
-        <div class="block pair"><span>Superfície</span>${seg('surface', 'Superfície', [['on', 'Com luz'], ['off', 'Sem']])}</div>
+        <div class="section">View</div>
+        <div class="block pair"><span>Style</span>${seg('style', 'Style', [['mosaic', 'Mosaic'], ['smooth', 'Smooth']])}</div>
+        <div class="block pair"><span>Surface</span>${seg('surface', 'Surface', [['on', 'Lit'], ['off', 'Off']])}</div>
         <div class="block">
-          <div class="label"><label for="zoomOut">Distância</label><span class="hint" data-value="zoomOut"></span></div>
+          <div class="label"><label for="zoomOut">Distance</label><span class="hint" data-value="zoomOut"></span></div>
           <input id="zoomOut" type="range" min="0.6" max="3" step="0.1">
-          <div class="ends"><span>Perto</span><span>Longe</span></div>
+          <div class="ends"><span>Near</span><span>Far</span></div>
         </div>
         <div class="block" data-row="cell">
-          <div class="label"><label for="cell">Ladrilho do mosaico</label><span class="hint" data-value="cell"></span></div>
+          <div class="label"><label for="cell">Mosaic tile</label><span class="hint" data-value="cell"></span></div>
           <input id="cell" type="range" min="6" max="20" step="1">
-          <div class="ends"><span>Fino</span><span>Grosso</span></div>
+          <div class="ends"><span>Fine</span><span>Coarse</span></div>
         </div>
-        <div class="block pair" data-row="grid"><span>Grade</span>${seg('grid', 'Grade', [['on', 'Com'], ['off', 'Sem']])}</div>
-        <div class="block pair"><span>Velocidade</span>${seg('speed', 'Velocidade', [['0.5', '0,5×'], ['1', '1×'], ['2', '2×']])}</div>
+        <div class="block pair" data-row="grid"><span>Grid</span>${seg('grid', 'Grid', [['on', 'On'], ['off', 'Off']])}</div>
+        <div class="block pair"><span>Speed</span>${seg('speed', 'Speed', [['0.5', '0.5×'], ['1', '1×'], ['2', '2×']])}</div>
       </div>
 
-      <footer><span><kbd>Espaço</kbd> pausa</span><span><kbd>H</kbd> esconde</span><span><kbd>←</kbd><kbd>→</kbd> troca o animal</span><span><kbd>Esc</kbd> volta ao mar</span></footer>
+      <footer><span><kbd>Space</kbd> pause</span><span><kbd>H</kbd> hide</span><span><kbd>←</kbd><kbd>→</kbd> change animal</span><span><kbd>Esc</kbd> back to the sea</span></footer>
     </div>
-    <button type="button" class="fab glass" data-open aria-label="Mostrar controles (H)" title="Mostrar controles (H)" aria-controls="panel">${ICONS.sliders}</button>
+    <button type="button" class="fab glass" data-open aria-label="Show controls (H)" title="Show controls (H)" aria-controls="panel">${ICONS.sliders}</button>
   </div>`
 
   const $ = <T extends Element>(sel: string): T => shadow.querySelector(sel) as T
@@ -348,12 +348,12 @@ export function mountPanel(
     const here = inView()
     const text =
       settings.observe !== null
-        ? `Observando: ${LABELS[settings.observe][1]}`
+        ? `Watching: ${LABELS[settings.observe][1]}`
         : settings.paused
-          ? 'Pausado'
+          ? 'Paused'
           : here.length === 0
-            ? 'Esperando o próximo animal'
-            : `${here.length} ${here.length === 1 ? 'animal' : 'animais'} na tela`
+            ? 'Waiting for the next animal'
+            : `${here.length} ${here.length === 1 ? 'animal' : 'animals'} on screen`
     $<HTMLSpanElement>('[data-status]').textContent = text
     wrap.classList.toggle('paused', settings.paused)
     for (const el of $$<HTMLSpanElement>('[data-here]')) el.classList.toggle('on', settings.observe === null && here.includes(el.dataset.here as Name))
@@ -363,8 +363,8 @@ export function mountPanel(
     wrap.classList.toggle('light', settings.theme === 'light')
     const pause = $<HTMLButtonElement>('[data-pause]')
     pause.innerHTML = settings.paused ? ICONS.play : ICONS.pause
-    pause.setAttribute('aria-label', settings.paused ? 'Continuar (espaço)' : 'Pausar (espaço)')
-    pause.title = settings.paused ? 'Continuar (espaço)' : 'Pausar (espaço)'
+    pause.setAttribute('aria-label', settings.paused ? 'Resume (space)' : 'Pause (space)')
+    pause.title = settings.paused ? 'Resume (space)' : 'Pause (space)'
     const watching = settings.observe !== null
     for (const b of $$<HTMLButtonElement>('[data-mode]')) b.setAttribute('aria-pressed', String((b.dataset.mode === 'watch') === watching))
     $<HTMLDivElement>('#page-sea').hidden = watching
@@ -379,8 +379,8 @@ export function mountPanel(
     const theme = $<HTMLButtonElement>('[data-theme-toggle]')
     const toLight = settings.theme === 'dark'
     theme.innerHTML = toLight ? ICONS.sun : ICONS.moon
-    theme.setAttribute('aria-label', toLight ? 'Tema claro' : 'Tema escuro')
-    theme.title = toLight ? 'Tema claro' : 'Tema escuro'
+    theme.setAttribute('aria-label', toLight ? 'Light theme' : 'Dark theme')
+    theme.title = toLight ? 'Light theme' : 'Dark theme'
     for (const b of $$<HTMLButtonElement>('[data-style]')) b.setAttribute('aria-pressed', String(b.dataset.style === settings.style))
     for (const b of $$<HTMLButtonElement>('[data-level]')) b.setAttribute('aria-pressed', String(Number(b.dataset.level) === settings.level))
     for (const b of $$<HTMLButtonElement>('[data-surface]')) b.setAttribute('aria-pressed', String((b.dataset.surface === 'on') === settings.surface))
@@ -391,7 +391,7 @@ export function mountPanel(
       $<HTMLElement>('[data-who-size]').textContent = sizeOf(settings.observe)
     }
     $<HTMLInputElement>('#zoomOut').value = String(settings.zoomOut)
-    $<HTMLSpanElement>('[data-value="zoomOut"]').textContent = `${settings.zoomOut.toFixed(1).replace('.', ',')}×`
+    $<HTMLSpanElement>('[data-value="zoomOut"]').textContent = `${settings.zoomOut.toFixed(1)}×`
     $<HTMLInputElement>('#cell').value = String(settings.cell)
     $<HTMLSpanElement>('[data-value="cell"]').textContent = String(settings.cell)
     // The tile only matters in the mosaic.

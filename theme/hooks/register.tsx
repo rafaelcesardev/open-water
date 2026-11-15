@@ -101,6 +101,6 @@ export const register: Register = on => {
   on('ui.render', { component: 'Backdrop' }, ($, e, next) => {
     if ((e.surface !== 'desktop' && e.surface !== 'mobile') || e.props.scene !== SCENE) return next(e)
     const { Svg } = $.ui.resolve(e)
-    return <Svg source={svg} alt="Um mar escuro visto de cima, com um animal passando" isInteractive />
+    return <Svg source={svg} alt="Sea animals swimming past, seen from above, as a mosaic" isInteractive />
   })
 }

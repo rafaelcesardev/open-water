@@ -28,10 +28,10 @@ A dark sea seen from above, live, and the animals that pass through it, each at 
 
 ## Controls
 
-A floating panel on the right, of see-through frosted glass (the animals show passing behind it). Its labels are in Portuguese; the English names below come with the label in parentheses. At the top: how many animals are on screen, the theme button (sun for light, moon for dark) and pause. Just below, the two modes:
+A floating panel on the right, of see-through frosted glass (the animals show passing behind it). At the top: how many animals are on screen, the theme button (sun for light, moon for dark) and pause. Just below, the two modes:
 
-- **Open sea** (Mar aberto): animals come and go. Choose how many may appear at once (− 1 to 8 +) and which species may come in, in grouped buttons (Sharks, Mammals, Others), with a green dot on the ones on screen now. Turning a species off, or lowering the number, makes the ones left over swim away, never vanishing all at once.
-- **Watch** (Observar): one animal alone, to look at its shape and movement. It keeps swimming, turning and speeding up as always, but the camera follows it and keeps it in the middle of the free area. Specks in the water stream past it and show how it moves. The cards show each one's real size, and the ‹ › arrows go to the next animal. Depth (Profundidade: Raso, Meio, Fundo) picks its level; on a change it rises or sinks there, slowly.
+- **Open sea:** animals come and go. Choose how many may appear at once (− 1 to 8 +) and which species may come in, in grouped buttons (Sharks, Mammals, Others), with a green dot on the ones on screen now. Turning a species off, or lowering the number, makes the ones left over swim away, never vanishing all at once.
+- **Watch:** one animal alone, to look at its shape and movement. It keeps swimming, turning and speeding up as always, but the camera follows it and keeps it in the middle of the free area. Specks in the water stream past it and show how it moves. The cards show each one's real size, and the ‹ › arrows go to the next animal. Depth (Shallow, Mid, Deep) picks its level; on a change it rises or sinks there, slowly.
 
 For both modes: mosaic or smooth, surface light on or off, distance (near or far), mosaic tile size, a grid over the water or plain water (mosaic only) and speed (0.5×, 1×, 2×).
 

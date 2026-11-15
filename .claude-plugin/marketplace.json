@@ -1,6 +1,6 @@
 {
   "name": "open-water",
-  "description": "Open Water: um mar escuro visto de cima, ao vivo, como tema do Claude.",
+  "description": "Open Water: live sea animals seen from above, as a Claude theme.",
   "owner": {
     "name": "rafaelcesardev"
   },
@@ -8,7 +8,7 @@
     {
       "name": "open-water",
       "source": "./theme",
-      "description": "O mar do Open Water ao vivo atrás da conversa, no app desktop e no celular."
+      "description": "Open Water's sea animals swimming live behind the conversation, in the desktop app and on mobile."
     }
   ]
 }
