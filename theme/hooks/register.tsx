@@ -50,7 +50,7 @@ const SPECIES = ['white', 'hammer', 'tiger', 'blacktip', 'orca', 'dolphin', 'tur
 // The water is the colour of the app's own panels in each mode, so a panel over it (60% of its colour, glass below)
 // comes out that same colour and the window is one even ground, as with no theme. By night it is measured off the
 // desktop app, exactly: water a shade off shows the panel's soft edges as a glow (#0b0b0b) or as faint vertical
-// bands (#181818, one level off). By day the stock surface-0, not yet measured: the page's pale blue tinted the edges.
+// bands (#181818, one level off). By day measured too, and it is the stock surface-0: the page's pale blue tinted the edges.
 const [WATER, LIGHT_WATER] = ['#191919', '#f9f9f7']
 // Only the sea is ours: the app's own colours stay as they are, in both modes. No veil on the panels: even of the
 // water's own colour, the app mixes its soft edge a level off here and there, faint vertical lines at the sides of
