@@ -52,9 +52,10 @@ const SPECIES = ['white', 'hammer', 'tiger', 'blacktip', 'orca', 'dolphin', 'tur
 // desktop app, exactly: water a shade off shows the panel's soft edges as a glow (#0b0b0b) or as faint vertical
 // bands (#181818, one level off). By day the stock surface-0, not yet measured: the page's pale blue tinted the edges.
 const [WATER, LIGHT_WATER] = ['#191919', '#f9f9f7']
-// Only the sea is ours: the app's own colours stay as they are, in both modes. No blur on the panels: under a sea
-// that moves, the app would blur it again at every change.
-const LOOK: ThemeSetArgs = { backdrop: { scene: SCENE, glass: { blur: 0, opacity: 0.6 } } }
+// Only the sea is ours: the app's own colours stay as they are, in both modes. No veil on the panels: even of the
+// water's own colour, the app mixes its soft edge a level off here and there, faint vertical lines at the sides of
+// the text; and no blur, which it would redo at every change of a sea that moves.
+const LOOK: ThemeSetArgs = { backdrop: { scene: SCENE, glass: { blur: 0, opacity: 0 } } }
 
 export const register: Register = on => {
   const sea = createBackdrop({
