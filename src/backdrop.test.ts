@@ -63,3 +63,15 @@ test('a point that is not a number is left out of the path, as on a canvas, not 
   p.lineTo(6, 7)
   assert.equal(p.d, 'M2 3L6 7')
 })
+
+test('a send picks up where the last one was shown, early or late, and a very late one only waits', () => {
+  const b = createBackdrop({ atOnce: 4, seconds: 2 })
+  b.next()
+  for (const shown of [0, 0.4, 2.3, 600]) {
+    const t = performance.now()
+    const svg = b.next(shown)
+    assert.ok(svg.startsWith('<svg') && svg.length <= 131072, String(shown))
+    // Late by minutes: the sea is not worked out for all of them.
+    assert.ok(performance.now() - t < 2000, `${shown}: ${Math.round(performance.now() - t)} ms`)
+  }
+})

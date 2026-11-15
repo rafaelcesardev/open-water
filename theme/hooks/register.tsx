@@ -40,8 +40,9 @@ const { problems } = makeColors({
 })
 
 const SCENE = 'open-water'
-// A stretch of sea a send: shorter gives the tiles more room a second, so the mosaic moves at more samples a second.
-const SECONDS = 1
+// A stretch of sea a send. The app shows each send in a frame of its own, made anew at every swap, so fewer swaps
+// is fewer chances to stutter; two seconds still fits the app's limit at ten samples a second.
+const SECONDS = 2
 /** Up to four animals at once, and not the blue whale or the school: they light the most tiles, so the app has the
  * least to redraw. */
 const AT_ONCE = 4
@@ -53,14 +54,10 @@ const LOOK: ThemeSetArgs = { backdrop: { scene: SCENE, glass: { blur: 0, opacity
 export const register: Register = on => {
   const sea = createBackdrop({ seconds: SECONDS, atOnce: AT_ONCE, species: SPECIES })
   let svg = sea.next()
-  // The next stretch, made ahead, so a swap never waits for the sea to be worked out.
-  let ready = sea.next()
   let timer: { cancel: () => void } | undefined
-  let making: { cancel: () => void } | undefined
   const stop = (): void => {
     timer?.cancel()
-    making?.cancel()
-    timer = making = undefined
+    timer = undefined
   }
 
   on('session.start', async ($, e, next) => {
@@ -68,15 +65,15 @@ export const register: Register = on => {
     if (unpainted !== undefined) $.ui.toast(unpainted)
     // Not drawn in the terminal and editors, and that is fine: the backdrop is only for the app.
     await $.theme.set(LOOK)
-    // The next stretch of sea as the last one ends.
+    // The next stretch of sea as the last one ends, from where the last one is by the time it was really shown: the
+    // timer is never exactly on time, and a stretch made ahead for an exact period jumped the sea ahead or back.
     stop()
-    timer = $.clock.every(SECONDS * 1000, () => {
-      svg = ready
+    let shownAt = await $.clock.now()
+    timer = $.clock.every(SECONDS * 1000, async () => {
+      const now = await $.clock.now()
+      svg = sea.next((now - shownAt) / 1000)
+      shownAt = now
       $.ui.invalidate('ui.render')
-      // Made a moment after the swap, so the work never holds the swap's drawing back.
-      making = $.clock.after(100, () => {
-        ready = sea.next()
-      })
     })
     return next(e)
   })

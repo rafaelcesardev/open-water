@@ -49,7 +49,8 @@ const FADE = 0.8
  * them all. */
 const SMOOTH_FITS: Kind['name'][] = ['white', 'hammer', 'tiger', 'blacktip', 'orca', 'dolphin', 'manta']
 
-export type Backdrop = { sea: Sea; next: () => string }
+/** `next(shown)`: the next send, `shown` the seconds the last one was on screen (`seconds` if not given). */
+export type Backdrop = { sea: Sea; next: (shown?: number) => string }
 
 export function createBackdrop(o: BackdropOptions = {}): Backdrop {
   const mosaic = (o.style ?? 'mosaic') === 'mosaic'
@@ -94,18 +95,22 @@ export function createBackdrop(o: BackdropOptions = {}): Backdrop {
    * The sea as a stream of moments, `RATE` a second, and each send the next `seconds` of it. A send starts `LEAD` into
    * its stretch, about the time the app takes to show it, and carries `SPARE` seconds past its end, so a send shown a
    * little late plays on instead of standing still: the sea goes on across a swap. Fewer samples a second when a send
-   * would not fit; at worst its first moment, still.
+   * would not fit; at worst its first moment, still. Each send picks up where the last one is on screen, by the
+   * seconds it was shown: a swap a little early or late then moves the sea on as far as the time did, instead of
+   * jumping it ahead or back. Later than the last one's spare, the sea waits where that one stopped.
    */
-  function stream<M>(take: () => M, draw: (moments: M[], step: number) => string): () => string {
+  function stream<M>(take: () => M, draw: (moments: M[], step: number) => string): Backdrop['next'] {
     const queue: M[] = []
     const [n, lead, spare] = [Math.round(seconds * RATE), Math.round(LEAD * RATE), Math.round(SPARE * RATE)]
-    return () => {
+    let first = true
+    return (shown = seconds) => {
+      if (!first) queue.splice(0, Math.max(0, Math.min(n + spare, Math.round(shown * RATE))))
+      first = false
       while (queue.length < n + spare + 1) {
         if (queue.length > 0) for (let t = 0; t < 1 / RATE - 1e-9; t += STEP) stepSea(sea, STEP, MARGIN)
         queue.push(take())
       }
       const moments = queue.slice(lead, n + spare + 1)
-      queue.splice(0, n)
       for (const every of [1, 2, 3, 4, 5, 6, 10]) {
         const svg = wrap(draw(moments.filter((_, i) => i % every === 0), every / RATE))
         if (svg.length <= limit) return svg

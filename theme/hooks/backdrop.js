@@ -2500,13 +2500,15 @@ function createBackdrop(o = {}) {
   function stream(take, draw) {
     const queue = [];
     const [n, lead, spare] = [Math.round(seconds * RATE), Math.round(LEAD2 * RATE), Math.round(SPARE * RATE)];
-    return () => {
+    let first = true;
+    return (shown = seconds) => {
+      if (!first) queue.splice(0, Math.max(0, Math.min(n + spare, Math.round(shown * RATE))));
+      first = false;
       while (queue.length < n + spare + 1) {
         if (queue.length > 0) for (let t = 0; t < 1 / RATE - 1e-9; t += STEP3) stepSea(sea, STEP3, MARGIN);
         queue.push(take());
       }
       const moments = queue.slice(lead, n + spare + 1);
-      queue.splice(0, n);
       for (const every of [1, 2, 3, 4, 5, 6, 10]) {
         const svg = wrap(draw(moments.filter((_, i) => i % every === 0), every / RATE));
         if (svg.length <= limit) return svg;
