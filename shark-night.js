@@ -711,10 +711,12 @@ var LOOKS = {
       u: 0.235,
       theta: 0.7,
       len: 0.12,
-      shape: [[-0.05, 0.14], [0.22, 0.15], [0.62, 0.075], [1, -0.03], [0.66, -0.085], [0.3, -0.13], [-0.05, -0.12]]
+      // Long and slender, but ending in a narrow rounded tip, not a point: both edges meet it running the same way.
+      shape: [[-0.05, 0.14], [0.3, 0.165], [0.97, 0.085], [1, 0], [1.03, -0.085], [0.32, -0.15], [-0.05, -0.12]]
     },
     root: 0.925,
-    flukes: [[0.042, 0], [0.046, 0.03], [0.052, 0.09], [0.058, 0.125], [0.03, 0.112], [-0.02, 0.05], [-0.04, 0.015]],
+    // Broad and triangular, the leading edge swept back, the tips rounded off, a shallow notch in the trailing edge.
+    flukes: [[0.04, 0], [0.05, 0.022], [0.065, 0.118], [0.056, 0.126], [0.047, 0.132], [-0.012, 0.06], [-0.04, 0.015]],
     pitch: 0.4,
     pivot: 0.68,
     paint: paintBlue
