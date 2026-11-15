@@ -1,65 +1,110 @@
-// The sea: a small simulation of four sharks, stepped as time passes. Nothing here is planned ahead: each shark
-// decides as it goes, with real randomness, so no two minutes are alike.
+// The sea: a small simulation of the animals in view, stepped as time passes. Nothing here is planned ahead: each
+// animal decides as it goes, with real randomness, so no two minutes are alike.
 //
-// THE WORLD is 1600 units wide and `h` deep.
-// A SHARK is a head that swims and a trail of where the head has been: its body lies along the trail, so it bends
-// through every turn the head took. Its tail beats once for every stride of water swum.
-// GIVING WAY: a body holds water along its trail until its tail has passed. Each shark looks a body and a half ahead
+// THE WORLD is WIDTH units wide and `h` deep, at 80 units a metre: every animal at its real size, so a blue whale
+// spans most of the view and a turtle is a fortieth of it.
+// ONLY WHAT IS IN VIEW EXISTS: at most four animals at once (a school of fish counts as one). One comes in from beyond
+// a random edge, stays a while, and swims off; once wholly out of view it is gone, and in a while another kind comes in.
+// AN ANIMAL is a head that swims and a trail of where the head has been: its body lies along the trail, so it bends
+// through every turn the head took. Sharks sway side to side; whales and dolphins beat their flukes up and down and
+// barely sway; a turtle's shell and a ray's disc are rigid and turn whole; a squid jets mantle first, its arms trailing.
+// GIVING WAY: a body holds water along its trail until its tail has passed. Each animal looks a body and a half ahead
 // for water another will hold when it gets there, and eases off to one side early, by no more than a fair swerve,
-// never on a circle tighter than its length allows; headed into another's body, it also eases its pace to pass behind.
+// never on a circle tighter than its body allows; headed into another's body, it also eases its pace to pass behind.
 // Nobody stops and nobody turns on the spot. Seldom, two still meet: one fin slides over the other, as at two depths.
 
+import { stepSchool } from './school'
+
+/** How a body is built, and so how it moves and is drawn. */
+export type Plan = 'shark' | 'cetacean' | 'turtle' | 'ray' | 'squid' | 'school'
+
 export type Kind = {
-  /** Snout to the tip of the tail. */
+  name: 'white' | 'hammer' | 'tiger' | 'blacktip' | 'blue' | 'orca' | 'dolphin' | 'turtle' | 'manta' | 'squid' | 'sardines'
+  plan: Plan
+  /** Front tip to the tip of the tail (a squid: mantle tip to the end of its tentacles; a school: one fish). */
   length: number
-  /** Half the body's width at its widest. */
+  /** Half the body's width at its widest (a ray: half its wingspan). */
   girth: number
-  /** Where the body is widest, as a share of its length from the snout. */
+  /** Sharks: where the body is widest, as a share of the length, and how round the snout is (0.5 blunt, higher
+   * longer and narrower). */
   widest: number
-  /** The snout's roundness: 0.5 a half ellipse (blunt), higher longer and narrower, always rounded. */
   snout: number
+  /** Other plans: the body's half width along it, as [share of length, share of girth], front to back. */
+  profile?: [number, number][]
+  /** Half the width of all the water it sweeps: body, fins or flippers or wings, the swing of its tail. */
+  reach: number
+  /** A shark's pectoral fin: how far it reaches. */
+  fin: number
+  hammer?: boolean
   /** Units a second, cruising. */
   speed: number
-  /** How far a pectoral fin reaches out. */
-  fin: number
-  /** Seconds of one tail beat at cruising speed. */
+  /** Seconds of one stroke (tail, flukes, flippers, wings, a jet) at cruising speed. */
   beat: number
-  /** Colours: the soft edge, the flank, the back, and a tiger's bars. */
-  fringe: string
-  flank: string
-  back: string
-  bar?: string
-  /** Fin tips of another colour, as on a blacktip. */
-  tips?: string
-  hammer?: boolean
+  /** Its tightest circle, as a share of its length. */
+  turn: number
+  /** The share of its length that bends along the trail; the rest (a tail fin, flukes) is drawn from the last of it. */
+  trunk: number
+  /** How far the tail swings side to side, as a share of the length. */
+  sway: number
+  /** How much each stroke surges its speed: a turtle's flippers, a squid's jet. */
+  surge: number
+  /** Its top pace, as a share of cruising speed. */
+  sprint: number
+  /** How often it bursts, turns sharply, and how soon it moves on, against a shark's 1. */
+  whim: number
+  /** Seconds it stays before it swims off: the least and the most. */
+  stay: readonly [number, number]
+  /** What it hunts. */
+  prey: Kind['name'][]
 }
 
-// Biggest first: a shark gives way to every one before it, and may chase every one after it.
-// Proportions of the real animals seen from above, a little way off.
+const M = 80
+const shark = { plan: 'shark', trunk: 0.8, sway: 0.05, surge: 0, whim: 1, stay: [30, 90] } as const
+const cetacean = { plan: 'cetacean', widest: 0, snout: 0, fin: 0, trunk: 0.9, sway: 0.004, surge: 0, stay: [25, 80] } as const
+
+// Real sizes and paces of the animals, seen from above. Lengths are typical adults.
 export const KINDS: Kind[] = [
-  // Great white: heavy and spindle-shaped, a rounded conical snout, long sickle pectorals.
-  { length: 400, girth: 44, widest: 0.33, snout: 0.62, speed: 62, fin: 92, beat: 2.6, fringe: '#6d7078', flank: '#8d9097', back: '#cfd2d6' },
-  // Hammerhead: a wide flat head (the cephalofoil) on a body already thick right behind it, short pectorals.
-  { length: 350, girth: 26, widest: 0.34, snout: 0.5, speed: 86, fin: 48, beat: 2.0, fringe: '#56637f', flank: '#7283a8', back: '#aebbd6', hammer: true },
-  // Tiger: a broad blunt head, almost square from above, dark bars across the back.
-  { length: 380, girth: 34, widest: 0.3, snout: 0.5, speed: 74, fin: 66, beat: 2.2, fringe: '#6f634f', flank: '#93846c', back: '#cbbc9e', bar: '#5b5142' },
-  // Blacktip: slender and quick, a rounded snout, black-tipped fins.
-  { length: 210, girth: 16, widest: 0.32, snout: 0.6, speed: 110, fin: 38, beat: 1.4, fringe: '#5f6d69', flank: '#7e8d89', back: '#bccbc6', tips: '#1f2224' },
+  // Great white, 4.5 m: heavy and spindle-shaped, a rounded conical snout, long sickle pectorals.
+  { ...shark, name: 'white', length: 4.5 * M, girth: 40, widest: 0.33, snout: 0.62, fin: 83, reach: 125, speed: 62, beat: 2.6, turn: 0.6, sprint: 2.3, prey: ['blacktip', 'dolphin', 'turtle'] },
+  // Great hammerhead, 4 m: the cephalofoil on a body already thick right behind it, short pectorals.
+  { ...shark, name: 'hammer', length: 4 * M, girth: 24, widest: 0.34, snout: 0.5, fin: 44, reach: 80, speed: 86, beat: 2.0, turn: 0.6, sprint: 2.3, hammer: true, prey: ['blacktip'] },
+  // Tiger, 3.8 m: a broad blunt head, almost square from above, dark bars across the back. The turtles' hunter.
+  { ...shark, name: 'tiger', length: 3.8 * M, girth: 27, widest: 0.3, snout: 0.5, fin: 53, reach: 85, speed: 74, beat: 2.2, turn: 0.6, sprint: 2.3, prey: ['turtle', 'blacktip'] },
+  // Blacktip, 1.6 m: slender and quick, a rounded snout, black-tipped fins.
+  { ...shark, name: 'blacktip', length: 1.6 * M, girth: 10, widest: 0.32, snout: 0.6, fin: 23, reach: 36, speed: 100, beat: 0.9, turn: 0.6, sprint: 2.3, whim: 1.3, prey: ['sardines'] },
+  // Blue whale, 24 m: long and slender, a broad flat U-shaped head, a small fin far back, flukes a quarter its
+  // length across. It barely turns; it passes through.
+  { ...cetacean, name: 'blue', length: 24 * M, girth: 0.07 * 24 * M, profile: [[0, 0.45], [0.05, 0.78], [0.15, 0.93], [0.35, 1], [0.6, 0.82], [0.8, 0.42], [0.9, 0.18]], reach: 330, speed: 128, beat: 6, turn: 0.8, sprint: 1.4, whim: 0.2, stay: [4, 14], prey: [] },
+  // Orca, 7 m: robust, a blunt rounded head, broad paddle flippers.
+  { ...cetacean, name: 'orca', length: 7 * M, girth: 0.09 * 7 * M, profile: [[0, 0.4], [0.06, 0.8], [0.25, 1], [0.5, 0.9], [0.75, 0.45], [0.9, 0.17]], reach: 135, speed: 120, beat: 1.6, turn: 0.45, sprint: 2.5, whim: 1.2, prey: ['white', 'tiger', 'hammer', 'blacktip', 'dolphin', 'manta'] },
+  // Bottlenose dolphin, 2.7 m: a short beak before the melon, small pointed flippers. Quick and restless.
+  { ...cetacean, name: 'dolphin', length: 2.7 * M, girth: 0.093 * 2.7 * M, profile: [[0, 0.1], [0.05, 0.28], [0.09, 0.6], [0.3, 1], [0.55, 0.85], [0.78, 0.38], [0.9, 0.15]], reach: 50, speed: 140, beat: 0.8, turn: 0.3, sprint: 2.5, whim: 2.5, prey: ['sardines'] },
+  // Green sea turtle, 1.2 m: an oval shell, a small head, long front flippers it flies with, stroke and glide.
+  { name: 'turtle', plan: 'turtle', length: 1.2 * M, girth: 32, widest: 0, snout: 0, fin: 0, profile: [[0, 0.25], [0.1, 0.32], [0.17, 0.8], [0.42, 1], [0.7, 0.75], [0.88, 0.3], [1, 0.05]], reach: 64, speed: 48, beat: 2.4, turn: 0.5, trunk: 1, sway: 0, surge: 0.35, sprint: 3, whim: 0.8, stay: [30, 80], prey: [] },
+  // Oceanic manta, 5.5 m across: a wide rigid disc, the horn-like cephalic fins in front, a short whip tail. Its
+  // wings beat slowly, a wave running back along them.
+  { name: 'manta', plan: 'ray', length: 4.1 * M, girth: 2.75 * M, widest: 0, snout: 0, fin: 0, profile: [[0, 0.4], [0.06, 0.45], [0.33, 1], [0.58, 0.12], [0.63, 0.04], [1, 0.02]], reach: 2.75 * M + 10, speed: 76, beat: 3, turn: 0.6, trunk: 1, sway: 0.01, surge: 0.12, sprint: 1.7, whim: 0.7, stay: [30, 80], prey: [] },
+  // Giant squid, 8 m with its feeding tentacles: a 2 m mantle with small fins at its tip, huge eyes, eight arms
+  // trailing and the two long tentacles beyond. It jets mantle first, in pulses.
+  { name: 'squid', plan: 'squid', length: 8 * M, girth: 22, widest: 0, snout: 0, fin: 0, profile: [[0, 0.35], [0.03, 1.1], [0.07, 0.8], [0.15, 1], [0.25, 0.9], [0.3, 1.05], [0.36, 0.85], [0.45, 1], [0.52, 0.5], [0.6, 0.18], [1, 0.12]], reach: 42, speed: 40, beat: 2.5, turn: 0.3, trunk: 1, sway: 0.03, surge: 0.6, sprint: 2.5, whim: 0.5, stay: [25, 60], prey: [] },
+  // A school of sardines, 22 cm each: they keep together and go one way; it parts round anything big and closes again.
+  { name: 'sardines', plan: 'school', length: 0.22 * M, girth: 2, widest: 0, snout: 0, fin: 0, reach: 170, speed: 60, beat: 0.35, turn: 9, trunk: 1, sway: 0.12, surge: 0, sprint: 3, whim: 1, stay: [30, 70], prey: [] },
 ]
 
-/** The body ends here, as a share of the length: the rest is the tail fin, seen edge on from above. */
-export const TRUNK = 0.8
-
-/** The sea's width in units (1600 by default): a wider sea, seen in the same window, shows the sharks smaller. */
+/** The sea's width in units (1600 by default): a wider sea, seen in the same window, shows the animals smaller. */
 export let WIDTH = 1600
 export function setWidth(width: number): void {
   WIDTH = width
 }
 /** Units between two points of a body. */
 const STEP = 10
+/** At most this many animals in view at once. */
+const AT_ONCE = 4
 
 export type Point = { x: number; y: number }
-export type Shark = {
+/** One fish of a school: where it is, its velocity, how far it has swum and how fast it is turning. */
+export type Fish = Point & { vx: number; vy: number; swum: number; turn: number }
+export type Animal = {
   kind: number
   x: number
   y: number
@@ -76,43 +121,54 @@ export type Shark = {
   way: number
   /** The heading it had when it began to give way: it swerves no more than a fair angle off it. */
   wayFrom: number
-  mode: 'roam' | 'return' | 'chase' | 'leave'
+  mode: 'enter' | 'roam' | 'return' | 'chase' | 'leave'
   modeFor: number
-  /** The shark chased, by its place in the list. */
-  prey: number
+  /** The animal it is chasing. */
+  prey: Animal | undefined
   /** Seconds before it may chase again. */
   rest: number
-  /** Where it is making for, coming back in or leaving. */
+  /** Where it is making for, coming in or back. */
   to: Point
-  /** Gone from view, body and all, at a scene's end: it waits there. */
-  out: boolean
+  /** Seconds left before it swims off. */
+  stay: number
+  /** Seconds since it was put beyond the edge, and whether it has come into view yet. */
+  age: number
+  seen: boolean
   swum: number
   /** Where the head has been, the newest first. */
   trail: Point[]
+  /** A school's fish; the animal itself is where the school means to go. */
+  fish: Fish[]
 }
 export type Sea = {
   h: number
-  sharks: Shark[]
+  animals: Animal[]
+  /** Seconds before another animal may come in, and the kind that left last (the next one is never that). */
+  next: number
+  gone: number
   chases: number
-  /** A scene is ending: every shark makes for the nearest edge and waits beyond it. */
-  leaving: boolean
 }
 
-/** A part of a body: a disc. `shade` 1 the flank, 2 the back, 3 a bar. */
-type Part = Point & { r: number; shade: number }
-
 const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v))
-const turnTo = (heading: number, target: number): number => {
+export const turnTo = (heading: number, target: number): number => {
   let d = (target - heading) % (Math.PI * 2)
   if (d > Math.PI) d -= Math.PI * 2
   if (d < -Math.PI) d += Math.PI * 2
   return d
 }
 
-/** How wide the body is to either side, `behind` units back from the snout: rounded at the snout, widest at
- * `widest`, then a long taper to a narrow tail stock. */
+/** How wide the body is to either side, `behind` units back from its front tip. */
 export function half(k: Kind, behind: number): number {
   const u = behind / k.length
+  if (k.profile !== undefined) {
+    const p = k.profile
+    let i = 1
+    while (i < p.length - 1 && p[i]![0] < u) i += 1
+    const [u0, w0] = p[i - 1]!
+    const [u1, w1] = p[i]!
+    return Math.max(1, k.girth * (w0 + (w1 - w0) * clamp((u - u0) / (u1 - u0 || 1), 0, 1)))
+  }
+  // A shark: rounded at the snout, widest at `widest`, then a long taper to a narrow tail stock.
   if (u < k.widest) {
     const x = u / k.widest
     // A hammerhead's body is already thick where it meets the head: no thin neck.
@@ -120,217 +176,238 @@ export function half(k: Kind, behind: number): number {
     // The width grows like a square root at the tip: a rounded snout, never a point.
     return k.girth * Math.pow(1 - (1 - x) * (1 - x), k.snout)
   }
-  const t = Math.min(1, (u - k.widest) / (TRUNK - k.widest))
+  const t = Math.min(1, (u - k.widest) / (k.trunk - k.widest))
   return Math.max(1.5, k.girth * (0.11 + 0.89 * Math.pow(1 - t, 1.6)))
 }
 
 /** One place along a body: where it is (sway included), the way it points, its half width, how far back it is. */
 export type Frame = Point & { fx: number; fy: number; w: number; u: number }
 
-/** The spine of a body as it lies along its trail, swaying: a frame every STEP units, snout first. */
-export function spineOf(s: Shark): Frame[] {
-  const k = KINDS[s.kind]!
+/** Strokes swum: its fraction is where in a stroke the animal is (0 to 1). */
+export const strokes = (a: Animal): number => a.swum / (KINDS[a.kind]!.speed * KINDS[a.kind]!.beat)
+
+/** The head as a frame pointing the way it swims: a rigid shell or disc is drawn from this. */
+export function poseOf(a: Animal): Frame {
+  const k = KINDS[a.kind]!
+  return { x: a.x, y: a.y, fx: Math.cos(a.heading), fy: Math.sin(a.heading), w: half(k, 0), u: 0 }
+}
+
+/** The spine of a body as it lies along its trail, swaying: a frame every STEP / 2 units, front tip first. */
+export function spineOf(a: Animal): Frame[] {
+  const k = KINDS[a.kind]!
   const frames: Frame[] = []
-  const stride = k.speed * k.beat
-  const spine = k.length * TRUNK
-  let a: Point = s
+  const phase = strokes(a)
+  const spine = k.length * k.trunk
+  let p: Point = a
   let i = 0
-  let b = s.trail[0]
-  let span = b === undefined ? 0 : Math.hypot(a.x - b.x, a.y - b.y)
+  let b = a.trail[0]
+  let span = b === undefined ? 0 : Math.hypot(p.x - b.x, p.y - b.y)
   let into = 0
   for (let behind = 0; behind <= spine + 0.01; behind += STEP / 2) {
     while (b !== undefined && into > span) {
       into -= span
-      a = b
+      p = b
       i += 1
-      b = s.trail[i]
-      span = b === undefined ? 0 : Math.hypot(a.x - b.x, a.y - b.y)
+      b = a.trail[i]
+      span = b === undefined ? 0 : Math.hypot(p.x - b.x, p.y - b.y)
     }
     if (b === undefined || span === 0) break
-    const fx = (a.x - b.x) / span
-    const fy = (a.y - b.y) / span
+    const fx = (p.x - b.x) / span
+    const fy = (p.y - b.y) / span
     const u = behind / k.length
     // The wave runs down the body: each point a little later than the one ahead, wider toward the tail.
-    const sway = k.length * 0.05 * Math.pow(u, 1.7) * Math.sin(2 * Math.PI * (s.swum / stride - 0.75 * u))
-    frames.push({ x: a.x - fx * into - fy * sway, y: a.y - fy * into + fx * sway, fx, fy, w: half(k, behind), u })
+    const sway = k.length * k.sway * Math.pow(u, 1.7) * Math.sin(2 * Math.PI * (phase - 0.75 * u))
+    frames.push({ x: p.x - fx * into - fy * sway, y: p.y - fy * into + fx * sway, fx, fy, w: half(k, behind), u })
     into += STEP / 2
   }
   return frames
 }
 
-/** A shark's body as discs, for keeping bodies apart: the spine, the pectoral fins, the tail, a hammer's head. */
-export function bodyOf(s: Shark): Part[] {
-  const k = KINDS[s.kind]!
-  const parts: Part[] = []
-  const frames = spineOf(s)
-  frames.forEach((f, i) => {
-    if (i % 2 !== 0) return
-    const barred = k.bar !== undefined && f.u > 0.2 && f.u < 0.72 && Math.floor((f.u * k.length) / 36) % 2 === 0
-    parts.push({ x: f.x, y: f.y, r: Math.max(2, f.w), shade: 1 })
-    parts.push({ x: f.x, y: f.y, r: barred ? f.w * 0.8 : f.w * 0.45, shade: barred ? 3 : 2 })
-  })
-  const reach = (f: Frame, back: number, out: number, r: number): void => {
-    parts.push({ x: f.x - f.fx * back - f.fy * out, y: f.y - f.fy * back + f.fx * out, r, shade: 1 })
-  }
-  const shoulder = frames.find(f => f.u >= 0.27)
-  if (shoulder !== undefined) {
-    for (const side of [-1, 1]) {
-      for (let t = 0.25; t <= 1; t += 0.25) reach(shoulder, k.fin * 0.62 * t, side * (shoulder.w + k.fin * 0.72 * t), k.fin * 0.16 * (1.1 - 0.6 * t))
-    }
-  }
+/** Discs covering a body, for what is in view and what a fish must keep clear of: the body every few units, and its
+ * fins or flippers or wings round the widest place. A school: its fish. */
+export function discsOf(a: Animal): (Point & { r: number })[] {
+  const k = KINDS[a.kind]!
+  if (k.plan === 'school') return a.fish.map(f => ({ x: f.x, y: f.y, r: k.length }))
+  const frames = spineOf(a)
+  const discs = frames.filter((_, i) => i % 4 === 0).map(f => ({ x: f.x, y: f.y, r: Math.max(4, f.w) }))
+  const widest = frames.reduce((best, f) => (f.w > best.w ? f : best), frames[0] ?? poseOf(a))
+  discs.push({ x: widest.x, y: widest.y, r: k.reach })
   const last = frames.at(-1)
-  if (last !== undefined) {
-    for (let t = 0.25; t <= 1; t += 0.25) reach(last, k.length * 0.2 * t, 0, Math.max(2, last.w * 1.2))
-  }
-  const first = frames[0]
-  if (k.hammer === true && first !== undefined) {
-    for (let t = -1; t <= 1; t += 0.25) reach(first, 0, k.length * 0.13 * t, k.length * 0.03)
-  }
-  return parts
+  // The tail fin or flukes beyond the trunk.
+  if (last !== undefined && k.trunk < 1) discs.push({ x: last.x - last.fx * k.length * (1 - k.trunk) * 0.6, y: last.y - last.fy * k.length * (1 - k.trunk) * 0.6, r: k.length * (1 - k.trunk) * 0.6 })
+  return discs
 }
 
-/** A sea `h` units deep, its four sharks about to come in. */
-export function createSea(h: number, random: () => number = Math.random): Sea {
-  const sharks = KINDS.map(
-    (k, kind): Shark => ({ kind, x: 0, y: 0, heading: 0, curve: 0, speed: k.speed, pace: 1, paceFor: 0, tight: 0, way: 0, wayFrom: 0, mode: 'return', modeFor: 0, prey: -1, rest: 0, to: { x: 0, y: 0 }, out: false, swum: random() * 500, trail: [] }),
-  )
-  const sea: Sea = { h, sharks, chases: 0, leaving: false }
-  enterSea(sea, random)
-  return sea
+/** Where a chaser makes for: the tail of its prey, or the middle of a school. */
+function tailOf(a: Animal): Point {
+  if (a.fish.length > 0) return { x: a.fish.reduce((s, f) => s + f.x, 0) / a.fish.length, y: a.fish.reduce((s, f) => s + f.y, 0) / a.fish.length }
+  const k = KINDS[a.kind]!
+  let behind = 0
+  let last: Point = a
+  for (const p of a.trail) {
+    behind += Math.hypot(p.x - last.x, p.y - last.y)
+    last = p
+    if (behind >= k.length * k.trunk) break
+  }
+  return last
 }
 
-/** Puts a shark out of view beyond an edge, its body straight behind it, heading in, some way off. */
-function putOutside(s: Shark, h: number, edge: number, random: () => number): void {
-  const k = KINDS[s.kind]!
-  // Its snout a moment from the edge: the water is not left empty for long.
-  const off = 30 + random() * 3 * k.speed
-  const across = 0.25 + random() * 0.5
-  const heading = [0, Math.PI, Math.PI / 2, -Math.PI / 2][edge] ?? 0
-  const x = edge === 0 ? -off : edge === 1 ? WIDTH + off : across * WIDTH
-  const y = edge === 2 ? -off : edge === 3 ? h + off : across * h
-  const trail: Point[] = []
-  for (let back = STEP; back <= k.length * 1.25; back += STEP) trail.push({ x: x - Math.cos(heading) * back, y: y - Math.sin(heading) * back })
-  Object.assign(s, { x, y, heading, curve: 0, speed: k.speed, pace: 1, paceFor: 0, tight: 0, way: 0, wayFrom: 0, mode: 'return', modeFor: 0, prey: -1, rest: 8 + random() * 12, out: false, trail })
-  s.to = { x: 300 + random() * (WIDTH - 600), y: h * (0.25 + random() * 0.5) }
+/** A sea `h` units deep and empty: the first animals come in over the first seconds. */
+export function createSea(h: number): Sea {
+  return { h, animals: [], next: 0, gone: -1, chases: 0 }
 }
 
 /**
- * Starts a scene: every shark is put out of view beyond an edge of its own, heading in. Each a different way off, so
- * they come in one after another over a few seconds.
+ * Brings in a new animal, if one may come: of a kind not in view and not the one that just left, from beyond a
+ * random edge at a random place along it, heading in, its body straight behind it. Not where another is about to
+ * be: a way in clear of every other's body.
  */
-export function enterSea(sea: Sea, random: () => number = Math.random): void {
-  sea.leaving = false
-  const edges = [0, 1, 2, 3]
-  for (let i = edges.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(random() * (i + 1))
-    const swap = edges[i]!
-    edges[i] = edges[j]!
-    edges[j] = swap
+function arrive(sea: Sea, random: () => number): void {
+  const here = new Set(sea.animals.map(a => a.kind))
+  const kinds = KINDS.map((_, i) => i).filter(i => !here.has(i) && i !== sea.gone)
+  const kind = kinds[Math.floor(random() * kinds.length)]
+  if (kind === undefined) return
+  const k = KINDS[kind]!
+  const others = sea.animals.filter(o => KINDS[o.kind]!.plan !== 'school').map(o => ({ o, discs: discsOf(o) }))
+  for (let tries = 0; tries < 8; tries += 1) {
+    const edge = Math.floor(random() * 4)
+    const along = 0.1 + random() * 0.8
+    // Its front tip a little way off, so it comes in at once.
+    const off = 20 + k.reach + random() * 120
+    const x = edge === 0 ? -off : edge === 1 ? WIDTH + off : along * WIDTH
+    const y = edge === 2 ? -off : edge === 3 ? sea.h + off : along * sea.h
+    const to = { x: WIDTH * (0.2 + random() * 0.6), y: sea.h * (0.2 + random() * 0.6) }
+    const heading = Math.atan2(to.y - y, to.x - x)
+    // Its way in: from beyond the end of its body to a body length inside.
+    const path: Point[] = []
+    for (let d = -k.length; d <= k.length; d += 40) path.push({ x: x + Math.cos(heading) * d, y: y + Math.sin(heading) * d })
+    const clear = others.every(({ o, discs }) => discs.every(c => path.every(p => Math.hypot(p.x - c.x, p.y - c.y) > c.r + k.reach + KINDS[o.kind]!.reach * 0.5)))
+    if (!clear) continue
+    const trail: Point[] = []
+    for (let back = STEP; back <= k.length * 1.25; back += STEP) trail.push({ x: x - Math.cos(heading) * back, y: y - Math.sin(heading) * back })
+    const a: Animal = { kind, x, y, heading, curve: 0, speed: k.speed, pace: 1, paceFor: 0, tight: 0, way: 0, wayFrom: 0, mode: 'enter', modeFor: 0, prey: undefined, rest: 8 + random() * 12, to, stay: k.stay[0] + random() * (k.stay[1] - k.stay[0]), age: 0, seen: false, swum: random() * 500, trail, fish: [] }
+    if (k.plan === 'school') {
+      // The fish in a loose shoal behind and about the head of the school, all heading in.
+      for (let i = 0; i < 140; i += 1) {
+        const back = Math.sqrt(random()) * 260
+        const side = (random() - 0.5) * 220
+        a.fish.push({ x: x - Math.cos(heading) * back - Math.sin(heading) * side, y: y - Math.sin(heading) * back + Math.cos(heading) * side, vx: Math.cos(heading) * k.speed, vy: Math.sin(heading) * k.speed, swum: random() * 50, turn: 0 })
+      }
+    }
+    sea.animals.push(a)
+    // The next a few seconds on at the soonest: they come in one by one.
+    sea.next = 2 + random() * 5
+    return
   }
-  sea.sharks.forEach((s, i) => putOutside(s, sea.h, edges[i] ?? 0, random))
+  // No clear way in just now.
+  sea.next = 0.5
 }
 
 /** Moves the sea on by `dt` seconds. */
 export function stepSea(sea: Sea, dt: number, tile: number, random: () => number = Math.random): void {
-  // A shark gone from view at a scene's end is in nobody's way.
-  const bodies = sea.sharks.map(s => (s.out ? [] : bodyOf(s)))
   const inView = (p: Point, margin: number): boolean => p.x > -margin && p.x < WIDTH + margin && p.y > -margin && p.y < sea.h + margin
-  sea.sharks.forEach((s, me) => {
-    if (s.out) return
+
+  // What has wholly left the view is gone; and what never came in, after a while.
+  sea.animals = sea.animals.filter(a => {
+    a.age += dt
+    const discs = discsOf(a)
+    if (!a.seen && discs.some(c => inView(c, -c.r * 0.5))) a.seen = true
+    const gone = (a.seen && discs.every(c => !inView(c, c.r + tile))) || (!a.seen && a.age > 40)
+    if (gone) {
+      sea.gone = a.kind
+      for (const o of sea.animals) if (o.prey === a) o.prey = undefined
+    }
+    return !gone
+  })
+  sea.next -= dt
+  if (sea.animals.length < AT_ONCE && sea.next <= 0) arrive(sea, random)
+
+  for (const s of sea.animals) {
     const k = KINDS[s.kind]!
     const step = Math.max(1, s.speed * dt)
     // No circle tighter than this: a body bent round a shorter one looks broken.
-    const tightest = k.length * 0.6
+    const tightest = k.length * k.turn
     const before = s.curve
     // Turns toward the mark over half a body length, not at once: no swinging back and forth past it.
-    const steer = (to: Point, radius: number): void => {
-      s.curve = clamp(turnTo(s.heading, Math.atan2(to.y - s.y, to.x - s.x)) / (k.length * 0.5), -1 / radius, 1 / radius)
+    const steer = (to: Point): void => {
+      s.curve = turnTo(s.heading, Math.atan2(to.y - s.y, to.x - s.x)) / Math.max(k.length * 0.5, tightest * 0.5)
     }
     s.modeFor -= dt
     s.paceFor -= dt
     s.rest -= dt
+    s.stay -= dt
     if (s.paceFor <= 0) s.pace = 1
-    const chaser = sea.leaving ? undefined : sea.sharks.find(o => o.mode === 'chase' && o.prey === me)
+    const chaser = sea.animals.find(o => o.mode === 'chase' && o.prey === s)
 
-    if (sea.leaving) {
-      // The scene is ending: straight out by the nearest edge, far enough for the whole body to follow.
-      if (s.mode !== 'leave') {
-        s.mode = 'leave'
-        s.prey = -1
-        const far = k.length * 1.6 + 150
-        const gaps = [s.x, WIDTH - s.x, s.y, sea.h - s.y]
-        const edge = gaps.indexOf(Math.min(...gaps))
-        s.to = edge === 0 ? { x: -far, y: s.y } : edge === 1 ? { x: WIDTH + far, y: s.y } : edge === 2 ? { x: s.x, y: -far } : { x: s.x, y: sea.h + far }
-      }
-      steer(s.to, 150)
-      s.pace = 1.4
-      s.paceFor = 1
-      if (bodies[me]!.every(p => !inView(p, p.r + tile))) {
-        s.out = true
-        return
-      }
-    } else if (chaser !== undefined) {
-      // Fleeing: away from the chaser, kept in view, at a sprint.
+    if (chaser !== undefined) {
+      // Fleeing: away from the chaser, at a sprint.
       const away = Math.atan2(s.y - chaser.y, s.x - chaser.x)
-      steer({ x: clamp(s.x + Math.cos(away) * 300, 80, WIDTH - 80), y: clamp(s.y + Math.sin(away) * 300, 80, sea.h - 80) }, 110)
-      s.pace = 2.3
+      steer({ x: s.x + Math.cos(away) * 300, y: s.y + Math.sin(away) * 300 })
+      s.pace = k.sprint
       s.paceFor = 0.6
-      s.mode = 'roam'
+      if (s.mode === 'chase') s.prey = undefined
+      if (s.mode !== 'leave') s.mode = 'roam'
     } else if (s.mode === 'chase') {
-      const prey = sea.sharks[s.prey]
-      const tail = prey === undefined ? undefined : bodies[s.prey]!.at(-1)
+      const prey = s.prey
+      const tail = prey === undefined ? undefined : tailOf(prey)
       const far = tail === undefined ? Infinity : Math.hypot(tail.x - s.x, tail.y - s.y)
-      if (prey === undefined || tail === undefined || prey.out || s.modeFor <= 0 || far > 760 || !inView(prey, 60)) {
+      if (prey === undefined || tail === undefined || s.modeFor <= 0 || far > 760 || !inView(prey, 60)) {
         // Gives up, tired: a slow glide, and a while before the next.
         s.mode = 'roam'
-        s.prey = -1
+        s.prey = undefined
         s.rest = 18 + random() * 17
         s.pace = 0.65
         s.paceFor = 3
       } else {
-        steer(tail, 120)
+        steer(tail)
         // A sprint until it is on the tail, then no faster than the prey.
-        s.pace = far < 160 ? Math.min(1.75, (prey.speed / k.speed) * 0.97) : 1.75
+        const top = 1 + (k.sprint - 1) * 0.6
+        s.pace = far < k.length * 0.5 + 60 ? Math.min(top, (prey.speed / k.speed) * 0.97) : top
         s.paceFor = 0.3
       }
-    } else if (s.mode === 'return') {
-      steer(s.to, 170)
+    } else if (s.mode === 'leave') {
+      // Swimming off: straight on, its turn dying away, until it is out of view and gone.
+      s.curve *= 0.98
+    } else if (s.mode === 'enter' || s.mode === 'return') {
+      steer(s.to)
       if (s.x > 160 && s.x < WIDTH - 160 && s.y > 140 && s.y < sea.h - 140) s.mode = 'roam'
+    } else if (s.stay <= 0) {
+      s.mode = 'leave'
     } else if (!inView(s, 110)) {
       s.mode = 'return'
-      s.to = { x: 250 + random() * (WIDTH - 500), y: sea.h * (0.2 + random() * 0.6) }
+      s.to = { x: WIDTH * (0.15 + random() * 0.7), y: sea.h * (0.2 + random() * 0.6) }
     } else {
       // Roaming: the curve drifts at random and relaxes toward straight; now and then, a tight turn.
       if (s.tight > 0) {
         s.tight -= step
       } else {
         const scale = step / 20
-        s.curve = clamp(s.curve * Math.pow(0.9, scale) + (random() - 0.5) * 0.0032 * Math.sqrt(scale), -1 / 200, 1 / 200)
-        if (random() < 0.007 * scale) {
-          s.curve = (random() < 0.5 ? -1 : 1) / (120 + random() * 60)
-          s.tight = 200 + random() * 440
+        s.curve = clamp(s.curve * Math.pow(0.9, scale) + ((random() - 0.5) * 0.65 * Math.sqrt(scale)) / tightest, -0.8 / tightest, 0.8 / tightest)
+        if (random() < 0.007 * scale * k.whim) {
+          s.curve = (random() < 0.5 ? -1 : 1) / tightest
+          s.tight = k.length * (0.5 + random())
         }
       }
       // Now and then a burst of speed, or a slow glide.
       if (s.paceFor <= 0) {
         const roll = random()
-        if (roll < 0.07 * dt) {
-          s.pace = 1.7 + random() * 0.6
+        if (roll < 0.07 * dt * k.whim) {
+          s.pace = 1 + (k.sprint - 1) * (0.5 + random() * 0.5)
           s.paceFor = 1.5 + random() * 1.5
-        } else if (roll < 0.1 * dt) {
+        } else if (roll < 0.1 * dt * k.whim) {
           s.pace = 0.65
           s.paceFor = 3 + random() * 2
         }
       }
-      // A smaller shark in front and near: after it.
+      // Something it hunts, in front and near, going its way: after it.
       if (s.rest <= 0 && inView(s, 0)) {
-        for (let o = me + 1; o < sea.sharks.length; o += 1) {
-          const prey = sea.sharks[o]!
+        for (const prey of sea.animals) {
+          if (!k.prey.includes(KINDS[prey.kind]!.name)) continue
           const far = Math.hypot(prey.x - s.x, prey.y - s.y)
           const off = Math.abs(turnTo(s.heading, Math.atan2(prey.y - s.y, prey.x - s.x)))
-          if (far < 560 && far > 180 && off < 1 && Math.abs(turnTo(s.heading, prey.heading)) < 1 && inView(prey, -40) && !sea.sharks.some(c => c.mode === 'chase' && c.prey === o) && random() < 0.8 * dt) {
+          if (far < 560 && far > k.length * 0.5 + 100 && off < 1 && Math.abs(turnTo(s.heading, prey.heading)) < 1 && inView(prey, -40) && !sea.animals.some(c => c.mode === 'chase' && c.prey === prey) && random() < 0.8 * dt) {
             s.mode = 'chase'
-            s.prey = o
+            s.prey = prey
             s.modeFor = 4 + random() * 3
             sea.chases += 1
             break
@@ -339,27 +416,32 @@ export function stepSea(sea: Sea, dt: number, tile: number, random: () => number
       }
     }
 
-    // Giving way, as big fish do, without fear or fuss. Another body holds water along its trail until its tail has
-    // passed, and the water ahead of its head once the head gets there. Swimming straight on, this head would come
-    // abreast of each such place at some moment; if that place is held then and lies too near, it is a clash. Of all
-    // the clashes it eases off by the narrower side, a little, early; and if that would take more than a fair swerve,
-    // it also eases its pace to pass behind. The other does the same: they slide past flank to flank, or one crosses
-    // just behind the other's tail. Side by side, they keep a fin's width apart. A chaser does not give way to its prey.
+    // Giving way, as big animals do, without fear or fuss. Another body holds water along its trail until its tail
+    // has passed, and the water ahead of its head once the head gets there. Swimming straight on, this head would
+    // come abreast of each such place at some moment; if that place is held then and lies too near, it is a clash. Of
+    // all the clashes it eases off by the narrower side, a little, early; and if that would take more than a fair
+    // swerve, it also eases its pace to pass behind. The other does the same: they slide past flank to flank, or one
+    // crosses just behind the other's tail. Side by side, they keep a fin's width apart. A chaser does not give way to
+    // its prey, and nobody gives way to a school: the school parts round them. Size counts: a whale does not alter
+    // course for a turtle; the small one gets out of the giant's way, briskly, never by dawdling in front of it.
     const hx = Math.cos(s.heading)
     const hy = Math.sin(s.heading)
     const v = Math.max(s.speed, 1)
-    // It looks a body and a half ahead: a long, slow shark needs that long to swing aside.
+    // It looks a body and a half ahead: a long, slow animal needs that long to swing aside.
     const horizon = Math.max(4, (k.length * 1.5) / v)
     let lo = Infinity
     let hi = -Infinity
     let first = Infinity
     let clearBy = 0
     let intoBody = false
-    sea.sharks.forEach((other, o) => {
-      if (o === me || bodies[o]!.length === 0 || (s.mode === 'chase' && s.prey === o)) return
+    let giant = false
+    for (const other of sea.animals) {
       const ko = KINDS[other.kind]!
-      // Each body's girth, fins and the swing of its tail, and a tile of water between.
-      const room = k.girth + k.fin * 0.75 + ko.girth + ko.fin * 0.75 + (k.length + ko.length) * 0.06 + tile
+      // A school does not plan its way round anything: its fish part round it as it comes (school.ts).
+      if (other === s || k.plan === 'school' || ko.plan === 'school' || (s.mode === 'chase' && s.prey === other) || ko.length < k.length * 0.3) continue
+      const big = ko.length > k.length * 2.5
+      // Each one's body and all it sweeps, and a tile of water between.
+      const room = k.reach + ko.reach + tile
       const vo = Math.max(other.speed, 1)
       const pad = room / v
       const held = (px: number, py: number, from: number, until: number): void => {
@@ -373,8 +455,9 @@ export function stepSea(sea: Sea, dt: number, tile: number, random: () => number
         hi = Math.max(hi, across + room)
         first = Math.min(first, t)
         clearBy = Math.max(clearBy, until + pad)
-        // Its body lies ahead, not alongside.
-        if (from === 0 && t > 0.3) intoBody = true
+        // Its body lies ahead, not alongside, and it is no smaller: the smaller of two lets the other by.
+        if (from === 0 && t > 0.3 && ko.length >= k.length * 0.8) intoBody = true
+        if (big) giant = true
       }
       for (let ahead = 20; ahead <= vo * horizon; ahead += 20) {
         held(other.x + Math.cos(other.heading) * ahead, other.y + Math.sin(other.heading) * ahead, ahead / vo, (ahead + ko.length) / vo)
@@ -383,17 +466,17 @@ export function stepSea(sea: Sea, dt: number, tile: number, random: () => number
       let behind = 0
       let since = 0
       let last: Point = other
-      for (const at of other.trail) {
-        const d = Math.hypot(at.x - last.x, at.y - last.y)
+      for (const p of other.trail) {
+        const d = Math.hypot(p.x - last.x, p.y - last.y)
         behind += d
         since += d
-        last = at
+        last = p
         if (behind > ko.length) break
         if (since < 20) continue
         since = 0
-        held(at.x, at.y, 0, (ko.length - behind) / vo)
+        held(p.x, p.y, 0, (ko.length - behind) / vo)
       }
-    })
+    }
     if (lo < 0 && hi > 0) {
       // The narrower side, chosen once and kept: changing its mind halfway would turn it back into the other.
       if (s.way === 0) {
@@ -402,13 +485,19 @@ export function stepSea(sea: Sea, dt: number, tile: number, random: () => number
       }
       const shift = s.way > 0 ? hi : lo
       const swerve = Math.atan2(shift / Math.max(first, 0.8), v)
-      // No more than a fair swerve off its course: past that, it holds the angle it has.
+      // No more than a fair swerve off its course: past that, it holds the angle it has. From a giant, a small one
+      // turns away further, as far as it must.
+      const fair = giant ? 1.4 : 0.8
       const off = turnTo(s.wayFrom, s.heading) * s.way
-      s.curve = off > 0.8 ? 0 : clamp(swerve, -0.6, 0.6) / (k.length * 0.35)
+      s.curve = off > fair ? 0 : clamp(swerve, -0.6, 0.6) / Math.max(k.length * 0.35, tightest * 0.6)
       s.tight = 0
-      // Headed into the other's body and unable to swerve clear, it glides to let it by: one passes just behind the
-      // other. Alongside, it never slows: that would only keep them side by side longer.
-      if ((Math.abs(swerve) > 0.6 || off > 0.8) && intoBody && chaser === undefined && s.mode !== 'chase' && !sea.leaving) {
+      if (giant && chaser === undefined) {
+        // A giant coming: off out of its way at a good pace.
+        s.pace = Math.max(s.pace, Math.min(k.sprint, 1.8))
+        s.paceFor = 0.5
+      } else if ((Math.abs(swerve) > 0.6 || off > fair) && intoBody && chaser === undefined && s.mode !== 'chase') {
+        // Headed into the other's body and unable to swerve clear, it glides to let it by: one passes just behind the
+        // other. Alongside, it never slows: that would only keep them side by side longer.
         s.pace = clamp(first / clearBy, 0.35, 1)
         s.paceFor = 0.3
       }
@@ -416,17 +505,17 @@ export function stepSea(sea: Sea, dt: number, tile: number, random: () => number
       s.way = 0
     }
 
-    // The pace is taken up fast and let go slowly, as a fish kicks and then coasts.
+    // The pace is taken up fast and let go slowly, as an animal kicks and then coasts.
     const want = k.speed * s.pace
     s.speed += (want - s.speed) * (1 - Math.exp(-dt / (want > s.speed ? 0.3 : 1)))
     // The bend comes on and goes off over a stretch of water, never in one stroke: the body flows from one turn to
     // the next.
-    const ease = (s.speed * dt) / (tightest * k.length * 0.15)
+    const ease = (s.speed * dt) / (tightest * Math.max(k.length * 0.15, tightest * 0.3))
     s.curve = clamp(before + clamp(s.curve - before, -ease, ease), -1 / tightest, 1 / tightest)
 
-    // The move: the head on along its curve, the body after it along the trail, which is kept a little longer than the
-    // body.
-    const go = s.speed * dt
+    // The move: the head on along its curve, surging with each stroke if it swims by strokes; the body after it along
+    // the trail, which is kept a little longer than the body.
+    const go = s.speed * dt * (1 + k.surge * Math.sin(2 * Math.PI * strokes(s)))
     s.trail.unshift({ x: s.x, y: s.y })
     s.heading += s.curve * go
     s.x += Math.cos(s.heading) * go
@@ -440,6 +529,6 @@ export function stepSea(sea: Sea, dt: number, tile: number, random: () => number
         break
       }
     }
-    bodies[me] = bodyOf(s)
-  })
+    if (k.plan === 'school') stepSchool(s, sea.animals, dt, random)
+  }
 }

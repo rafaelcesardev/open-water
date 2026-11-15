@@ -1,22 +1,22 @@
-// Shark Night, live: four sharks in a dark sea, seen from above, on a canvas.
+// Shark Night, live: a dark sea seen from above, on a canvas, and the animals passing through it at their real sizes:
+// sharks, a blue whale, orcas, dolphins, a sea turtle, a manta, a giant squid, a school of sardines.
 //
-// The sea is simulated as it runs (sim.ts): each shark decides as it goes, with real randomness, so no two minutes
-// are alike. Sharks wander, burst and glide; a bigger one that comes up behind a smaller one may chase it, and the
-// smaller one flees; no two bodies ever touch.
+// The sea is simulated as it runs (sim.ts): each animal decides as it goes, with real randomness, so no two minutes
+// are alike. At most four are in view; each comes in from beyond an edge, stays a while and swims off, and another
+// kind comes in. They wander, burst and glide, give way to each other, and hunters chase what they really hunt.
 //
-// HOW IT IS DRAWN, every frame: each body is outlined along its swaying spine (a rounded snout, a long taper to the
-// tail stock), shaded from flank to back, with its fins, the tail fin seen edge on, its eyes, a hammerhead's
-// cephalofoil, a tiger's bars and a blacktip's dark fin tips.
-// With `style: 'mosaic'` (the default) those sharks are painted onto a tiny canvas, one pixel a tile, and each lit
+// HOW IT IS DRAWN, every frame: each animal by the drawing for its plan of body (draw/), in sea units.
+// With `style: 'mosaic'` (the default) the animals are painted onto a tiny canvas, one pixel a tile, and each lit
 // tile is drawn a little brighter or darker than its neighbours, with a glyph cut into it: tiles light up and go dark
-// in place as a shark passes. `style: 'smooth'` shows the outlined sharks themselves.
+// in place as an animal passes. `style: 'smooth'` shows the drawn animals themselves.
 
-import { KINDS, TRUNK, WIDTH, createSea, setWidth, spineOf, stepSea, type Frame, type Kind, type Sea, type Shark } from './sim'
+import { DRAW } from './draw/all'
+import { KINDS, WIDTH, createSea, setWidth, stepSea, type Sea } from './sim'
 
 export type Options = {
-  /** 'mosaic' (default): the sharks as glyph tiles. 'smooth': the outlined sharks themselves. */
+  /** 'mosaic' (default): the animals as glyph tiles. 'smooth': the drawn animals themselves. */
   style?: 'mosaic' | 'smooth'
-  /** How far off the sea is seen: 1 as designed, more shows a wider sea with smaller sharks. Default 1.5. */
+  /** How far off the sea is seen: 1 as designed, more shows a wider sea with smaller animals. Default 1.5. */
   zoomOut?: number
   /** Mosaic only: the tile's size, in units of the sea. Smaller, finer mosaic. Default 10. */
   cell?: number
@@ -27,7 +27,6 @@ export type Options = {
 const GLYPHS = '$%tSX8@:;#S%X8tS'
 const SHADES = [1, 0.886, 0.776, 0.659]
 const GLYPH_INK = 0.227
-const EYE = '#1d1f22'
 /** Seconds of sea a step of the simulation covers: one a frame at 60 frames a second. */
 const STEP = 1 / 60
 /** Units kept between bodies (the simulation's margin). */
@@ -41,156 +40,6 @@ function rng(seed: number): () => number {
     t = Math.imul(t ^ (t >>> 15), t | 1)
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-/** A point `along` the frame's heading and `out` to its left, in sea units. */
-const at = (f: Frame, along: number, out: number): [number, number] => [f.x + f.fx * along - f.fy * out, f.y + f.fy * along + f.fx * out]
-
-/** One side of the outline and back down the other, snout to tail stock, `share` of the body's width. */
-function outline(ctx: CanvasRenderingContext2D, frames: Frame[], share: number): void {
-  ctx.beginPath()
-  frames.forEach((f, i) => {
-    const [x, y] = at(f, 0, f.w * share)
-    if (i === 0) ctx.moveTo(x, y)
-    else ctx.lineTo(x, y)
-  })
-  for (let i = frames.length - 1; i >= 0; i -= 1) {
-    const [x, y] = at(frames[i]!, 0, -frames[i]!.w * share)
-    ctx.lineTo(x, y)
-  }
-  ctx.closePath()
-}
-
-/** A pair of fins swept back from frame `f`: `reach` out, rooted along `root` units of the flank. */
-function fins(ctx: CanvasRenderingContext2D, k: Kind, f: Frame, reach: number, root: number): void {
-  for (const side of [-1, 1]) {
-    const w = f.w
-    const p = (a: number, b: number): [number, number] => at(f, a, side * b)
-    ctx.beginPath()
-    ctx.moveTo(...p(root * 0.5, w * 0.8))
-    ctx.quadraticCurveTo(...p(-reach * 0.05, w + reach * 0.5), ...p(-reach * 0.62, w + reach * 0.72))
-    ctx.quadraticCurveTo(...p(-reach * 0.32, w + reach * 0.3), ...p(-root * 0.5, w * 0.8))
-    ctx.closePath()
-    ctx.fillStyle = k.flank
-    ctx.fill()
-    if (k.tips !== undefined) {
-      ctx.beginPath()
-      ctx.arc(...p(-reach * 0.56, w + reach * 0.64), reach * 0.12, 0, Math.PI * 2)
-      ctx.fillStyle = k.tips
-      ctx.fill()
-    }
-  }
-}
-
-/** One shark, in sea units, onto `ctx`. */
-function drawShark(ctx: CanvasRenderingContext2D, s: Shark): void {
-  const k = KINDS[s.kind]!
-  const frames = spineOf(s)
-  if (frames.length < 3) return
-  const L = k.length
-  const near = (u: number): Frame => frames.reduce((best, f) => (Math.abs(f.u - u) < Math.abs(best.u - u) ? f : best))
-
-  // The tail fin from above: the tall caudal fin seen edge on, a narrow blade swept by the last of the sway. As the
-  // tail bends (a beat, a turn) the fin rolls, and a long shark's fin is tall enough to show both lobes apart: the
-  // upper one out to one side, the shorter lower one to the other. A small shark's short fin stays a single point.
-  const last = frames[frames.length - 1]!
-  const stock = last.w
-  const blade = L * (1 - TRUNK)
-  const before = near(TRUNK - 0.18)
-  const bend = Math.atan2(before.fx * last.fy - before.fy * last.fx, before.fx * last.fx + before.fy * last.fy)
-  const tall = Math.min(1, Math.max(0, (L - 230) / 120))
-  const roll = Math.sin(Math.max(-0.9, Math.min(0.9, bend * 1.6)) * tall)
-  const lobe = (along: number, out: number, thick: number): void => {
-    const l = Math.hypot(along, out)
-    const [da, db] = [along / l, out / l]
-    const p = (s: number, w: number): [number, number] => at(last, da * s - db * w, db * s + da * w)
-    ctx.beginPath()
-    ctx.moveTo(...p(-2, -stock))
-    ctx.bezierCurveTo(...p(l * 0.3, -thick * 1.7), ...p(l * 0.75, -thick * 0.9), ...p(l, 0))
-    ctx.bezierCurveTo(...p(l * 0.75, thick * 0.9), ...p(l * 0.3, thick * 1.7), ...p(-2, stock))
-    ctx.closePath()
-    ctx.fillStyle = k.fringe
-    ctx.fill()
-  }
-  lobe(-blade, roll * blade * 0.9, stock)
-  if (roll !== 0) lobe(-blade * 0.7, -roll * blade * 0.6, stock * 0.8)
-
-  // Fins under the body: the pectorals at the shoulder, the small pelvics further back.
-  fins(ctx, k, near(0.27), k.fin, L * 0.07)
-  fins(ctx, k, near(0.6), k.fin * 0.3, L * 0.03)
-
-  // The body: the flank with a fine dark edge, then the paler back along the middle.
-  outline(ctx, frames, 1)
-  ctx.fillStyle = k.flank
-  ctx.fill()
-  ctx.lineWidth = 1.6
-  ctx.strokeStyle = k.fringe
-  ctx.stroke()
-  outline(ctx, frames, 0.5)
-  ctx.fillStyle = k.back
-  ctx.fill()
-
-  // A tiger's bars across the back.
-  if (k.bar !== undefined) {
-    ctx.strokeStyle = k.bar
-    ctx.lineWidth = 3
-    ctx.lineCap = 'round'
-    ctx.beginPath()
-    for (const f of frames) {
-      if (f.u < 0.22 || f.u > 0.72 || Math.abs((f.u * L) % 26) > 2.6) continue
-      ctx.moveTo(...at(f, 0, f.w * 0.7))
-      ctx.lineTo(...at(f, 0, -f.w * 0.7))
-    }
-    ctx.stroke()
-  }
-
-  // The first dorsal fin from above: a dark ridge along the back.
-  const dorsal = near(0.4)
-  ctx.strokeStyle = k.tips ?? k.fringe
-  ctx.lineWidth = Math.max(2, k.girth * 0.13)
-  ctx.lineCap = 'round'
-  ctx.beginPath()
-  ctx.moveTo(...at(dorsal, L * 0.04, 0))
-  ctx.lineTo(...at(dorsal, -L * 0.07, 0))
-  ctx.stroke()
-
-  const head = frames[0]!
-  ctx.fillStyle = EYE
-  if (k.hammer === true) {
-    // The cephalofoil: a flat wing across the head, a quarter of the body long and narrow front to back, its front
-    // edge gently curved, its rear edge running almost straight out to the sides, an eye at each rounded end.
-    const span = L * 0.13
-    const deep = L * 0.028
-    const neck = near(0.06).w
-    const side: [number, number][] = [
-      [1.3 * deep, 0], [1.25 * deep, 0.25 * span], [1.1 * deep, 0.5 * span], [0.85 * deep, 0.75 * span], [0.6 * deep, 0.9 * span],
-      [0.3 * deep, 0.98 * span], [-0.1 * deep, span], [-0.5 * deep, 0.99 * span], [-0.8 * deep, 0.93 * span], [-0.95 * deep, 0.82 * span],
-      [-1.02 * deep, 0.6 * span], [-1.08 * deep, Math.max(neck * 1.45, 0.38 * span)], [-1.3 * deep, neck * 1.15], [-1.8 * deep, neck * 1.03], [-2.6 * deep, neck],
-    ]
-    const pts = [...side, ...side.slice(1).reverse().map(([a, b]): [number, number] => [a, -b])]
-    ctx.beginPath()
-    pts.forEach(([a, b], i) => (i === 0 ? ctx.moveTo(...at(head, a, b)) : ctx.lineTo(...at(head, a, b))))
-    ctx.closePath()
-    ctx.fillStyle = k.flank
-    ctx.fill()
-    ctx.strokeStyle = k.fringe
-    ctx.lineWidth = 1.6
-    ctx.stroke()
-    ctx.fillStyle = EYE
-    for (const b of [-1, 1]) {
-      ctx.beginPath()
-      ctx.arc(...at(head, -deep * 0.15, b * span * 0.93), 1.8, 0, Math.PI * 2)
-      ctx.fill()
-    }
-  } else {
-    // The eyes, just behind the snout on either side.
-    const eye = near(0.06)
-    for (const b of [-1, 1]) {
-      ctx.beginPath()
-      ctx.arc(...at(eye, 0, b * eye.w * 0.78), 1.5, 0, Math.PI * 2)
-      ctx.fill()
-    }
   }
 }
 
@@ -274,22 +123,20 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     sea = createSea(depth)
   }
 
-  const visible = (s: Shark): boolean => !s.out
-
   function paint(): void {
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.drawImage(still, 0, 0)
     if (style === 'smooth') {
       ctx.setTransform(scale, 0, 0, scale, 0, 0)
       ctx.lineJoin = 'round'
-      for (const s of sea.sharks) if (visible(s)) drawShark(ctx, s)
+      for (const a of sea.animals) DRAW[KINDS[a.kind]!.plan](ctx, a, 0)
       return
     }
     lctx.setTransform(1, 0, 0, 1, 0, 0)
     lctx.clearRect(0, 0, cols, rows)
     lctx.setTransform(1 / cell, 0, 0, 1 / cell, 0, 0)
     lctx.lineJoin = 'round'
-    for (const s of sea.sharks) if (visible(s)) drawShark(lctx, s)
+    for (const a of sea.animals) DRAW[KINDS[a.kind]!.plan](lctx, a, cell)
     const px = lctx.getImageData(0, 0, cols, rows).data
     const size = cell * scale
     const inset = Math.max(0.5, size * 0.06)
@@ -337,8 +184,8 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     frame = requestAnimationFrame(tick)
   }
   if (reduced.matches) {
-    // Still: some seconds in, so the sharks are in view, and no motion.
-    for (let i = 0; i < 480; i += 1) stepSea(sea, STEP, MARGIN)
+    // Still: some seconds in, so a few animals are in view, and no motion.
+    for (let i = 0; i < 1500; i += 1) stepSea(sea, STEP, MARGIN)
     paint()
   } else {
     paint()
