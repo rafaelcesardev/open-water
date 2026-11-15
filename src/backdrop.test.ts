@@ -82,3 +82,14 @@ test('without texture, nothing but the animals over the water', () => {
   assert.match(svg, /\.w\{fill:#0b0b0b\}.*\.w\{fill:#f9f9f7\}/)
   assert.match(createBackdrop({ atOnce: 4 }).next(), /class="ink".*fill="url\(#grid\)"/)
 })
+
+test('the sea starts empty: the first animals come in from beyond an edge, never already in view', () => {
+  for (let run = 0; run < 20; run += 1) {
+    const b = createBackdrop({ atOnce: 4 })
+    assert.equal(b.sea.animals.length, 0)
+    // The first moment of the first send: no tile lit yet.
+    const svg = b.next()
+    const first = svg.slice(svg.indexOf('<g transform="scale('), svg.indexOf('<g visibility="hidden">'))
+    assert.doesNotMatch(first, /<path/, `run ${run}`)
+  }
+})

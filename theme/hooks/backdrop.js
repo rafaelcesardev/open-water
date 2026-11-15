@@ -2474,7 +2474,6 @@ function createBackdrop(o = {}) {
   sea.atOnce = o.atOnce ?? (mosaic ? 4 : 1);
   const names = o.species ?? (mosaic ? KINDS.map((k) => k.name) : SMOOTH_FITS);
   sea.allowed = new Set(KINDS.map((k, i) => names.includes(k.name) ? i : -1).filter((i) => i >= 0));
-  for (let t = 0; t < 6; t += STEP3) stepSea(sea, STEP3, MARGIN);
   const inOrder = () => [...sea.animals].sort((p, q) => q.depth - p.depth);
   const tiles = createMosaic(width, height, o.cell ?? 10, o.texture ?? true);
   const shoot = () => {

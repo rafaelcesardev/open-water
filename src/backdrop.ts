@@ -62,8 +62,8 @@ export function createBackdrop(o: BackdropOptions = {}): Backdrop {
   sea.atOnce = o.atOnce ?? (mosaic ? 4 : 1)
   const names = o.species ?? (mosaic ? KINDS.map(k => k.name) : SMOOTH_FITS)
   sea.allowed = new Set(KINDS.map((k, i) => (names.includes(k.name) ? i : -1)).filter(i => i >= 0))
-  // A few seconds in, so the first send already has an animal coming in.
-  for (let t = 0; t < 6; t += STEP) stepSea(sea, STEP, MARGIN)
+  // Empty at first: the first animal comes in from beyond an edge at once, as every one after it does. Worked out a
+  // few seconds ahead, the sea started with animals already in the middle of the screen.
 
   // The deepest first: one nearer the surface passes over it.
   const inOrder = () => [...sea.animals].sort((p, q) => q.depth - p.depth)
