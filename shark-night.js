@@ -221,6 +221,28 @@ function tailOf(a) {
 function createSea(h) {
   return { h, animals: [], next: 0, gone: -1, chases: 0, atOnce: 4, allowed: new Set(KINDS.map((_, i) => i)) };
 }
+function make(kind, x, y, heading, to, random) {
+  const k = KINDS[kind];
+  const trail = [];
+  for (let back = STEP; back <= k.length * 1.25; back += STEP) trail.push({ x: x - Math.cos(heading) * back, y: y - Math.sin(heading) * back });
+  const a = { kind, x, y, heading, curve: 0, speed: k.speed, pace: 1, paceFor: 0, tight: 0, way: 0, wayFrom: 0, mode: "enter", modeFor: 0, prey: void 0, rest: 8 + random() * 12, to, stay: k.stay[0] + random() * (k.stay[1] - k.stay[0]), age: 0, seen: false, swum: random() * 500, trail, fish: [] };
+  if (k.plan === "school") {
+    for (let i = 0; i < 160; i += 1) {
+      const back = Math.sqrt(random()) * 380;
+      const side = (random() - 0.5) * 320;
+      a.fish.push({ x: x - Math.cos(heading) * back - Math.sin(heading) * side, y: y - Math.sin(heading) * back + Math.cos(heading) * side, vx: Math.cos(heading) * k.speed, vy: Math.sin(heading) * k.speed, swum: random() * 50, turn: 0 });
+    }
+  }
+  return a;
+}
+function place(sea, kind, random = Math.random) {
+  const heading = random() * Math.PI * 2;
+  const a = make(kind, WIDTH / 2, sea.h / 2, heading, { x: WIDTH / 2, y: sea.h / 2 }, random);
+  Object.assign(a, { mode: "roam", stay: Infinity, seen: true });
+  sea.animals = [a];
+  sea.next = Infinity;
+  return a;
+}
 function arrive(sea, random) {
   const here = new Set(sea.animals.map((a) => a.kind));
   const open = KINDS.map((_, i) => i).filter((i) => sea.allowed.has(i) && !here.has(i));
@@ -241,16 +263,7 @@ function arrive(sea, random) {
     for (let d = -k.length; d <= k.length; d += 40) path.push({ x: x + Math.cos(heading) * d, y: y + Math.sin(heading) * d });
     const clear = others.every(({ o, discs }) => discs.every((c) => path.every((p) => Math.hypot(p.x - c.x, p.y - c.y) > c.r + k.reach + KINDS[o.kind].reach * 0.5)));
     if (!clear) continue;
-    const trail = [];
-    for (let back = STEP; back <= k.length * 1.25; back += STEP) trail.push({ x: x - Math.cos(heading) * back, y: y - Math.sin(heading) * back });
-    const a = { kind, x, y, heading, curve: 0, speed: k.speed, pace: 1, paceFor: 0, tight: 0, way: 0, wayFrom: 0, mode: "enter", modeFor: 0, prey: void 0, rest: 8 + random() * 12, to, stay: k.stay[0] + random() * (k.stay[1] - k.stay[0]), age: 0, seen: false, swum: random() * 500, trail, fish: [] };
-    if (k.plan === "school") {
-      for (let i = 0; i < 160; i += 1) {
-        const back = Math.sqrt(random()) * 380;
-        const side = (random() - 0.5) * 320;
-        a.fish.push({ x: x - Math.cos(heading) * back - Math.sin(heading) * side, y: y - Math.sin(heading) * back + Math.cos(heading) * side, vx: Math.cos(heading) * k.speed, vy: Math.sin(heading) * k.speed, swum: random() * 50, turn: 0 });
-      }
-    }
+    const a = make(kind, x, y, heading, to, random);
     sea.animals.push(a);
     sea.next = 2 + random() * 5;
     return;
@@ -994,10 +1007,10 @@ function drawRay(ctx, a, tile) {
   const roll = Math.max(-0.3, Math.min(0.3, a.curve * 60));
   const sx = k.girth / HALF;
   const sy = k.length / LENGTH;
-  const place = (out, back, side) => at(pose, -back * sy, side * reach(out, back, side, phase, roll) * sx);
+  const place2 = (out, back, side) => at(pose, -back * sy, side * reach(out, back, side, phase, roll) * sx);
   const trace = (pts) => pts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
-  const right = RIGHT.map(([o, b]) => place(o, b, 1));
-  const left = RIGHT.map(([o, b]) => place(o, b, -1));
+  const right = RIGHT.map(([o, b]) => place2(o, b, 1));
+  const left = RIGHT.map(([o, b]) => place2(o, b, -1));
   const disc = () => {
     ctx.beginPath();
     trace([...right, ...[...left].reverse()]);
@@ -1054,12 +1067,12 @@ function drawRay(ctx, a, tile) {
     ctx.stroke();
   }
   for (const side of [1, -1]) {
-    const grad = ctx.createLinearGradient(...place(10, 60, side), ...place(88, 70, side));
+    const grad = ctx.createLinearGradient(...place2(10, 60, side), ...place2(88, 70, side));
     grad.addColorStop(0, "#dcdfdc");
     grad.addColorStop(0.55, "#b7bdbd");
     grad.addColorStop(1, "#737b80");
     ctx.beginPath();
-    trace(PATCH.map(([o, b]) => place(o, b, side)));
+    trace(PATCH.map(([o, b]) => place2(o, b, side)));
     ctx.closePath();
     ctx.fillStyle = grad;
     ctx.fill();
@@ -1096,7 +1109,7 @@ function drawRay(ctx, a, tile) {
   ctx.fillStyle = "#1b1d20";
   ctx.fill();
   for (const side of [1, -1]) {
-    const [x, y] = place(57, 33, side);
+    const [x, y] = place2(57, 33, side);
     ctx.beginPath();
     ctx.arc(x, y, 4.6, 0, Math.PI * 2);
     ctx.fillStyle = "#2d3136";
@@ -1912,6 +1925,7 @@ var CSS = `
   --chip-on: rgba(255, 255, 255, 0.16);
   --accent: #8fd3e8;
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.38);
+  color-scheme: dark;
   /* Over thin glass, a soft shadow keeps the text legible whatever swims behind. */
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   font: 13px/1.35 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -1935,6 +1949,7 @@ var CSS = `
   --chip-on: rgba(20, 30, 40, 0.12);
   --accent: #1f7d99;
   --shadow: 0 18px 50px rgba(30, 50, 70, 0.20);
+  color-scheme: light;
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
 }
 .glass {
@@ -2015,6 +2030,14 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 2px 0 0;
 .wide:hover { background: var(--chip-on); }
 .fab { width: 46px; height: 46px; border-radius: 16px; display: grid; place-items: center; color: var(--text); }
 .hidden { display: none; }
+.select { position: relative; }
+.select select {
+  appearance: none; -webkit-appearance: none; width: 100%; font: inherit; color: inherit;
+  background: var(--chip); border: 1px solid var(--edge); border-radius: 12px; padding: 8px 32px 8px 12px; cursor: pointer;
+}
+.select select:hover { background: var(--chip-on); }
+.select svg { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--muted); }
+.note { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 `;
 var SLIDERS = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>';
@@ -2029,6 +2052,14 @@ function mountPanel(host, settings, change) {
   <div class="wrap">
     <div class="panel glass" id="panel" role="region" aria-label="Controles do Shark Night">
       <header><h1>Shark Night</h1><button type="button" class="icon" data-collapse aria-label="Recolher controles" aria-controls="panel">${CLOSE}</button></header>
+      <section>
+        <h2>Observar</h2>
+        <div class="select"><select id="observe" aria-label="Observar um animal sozinho">
+          <option value="">Mar aberto</option>
+          ${KINDS.map((k) => `<option value="${k.name}">${LABELS[k.name][0]}</option>`).join("")}
+        </select><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
+        <p class="note" data-note></p>
+      </section>
       <section>
         <h2>Animais</h2>
         ${slider("atOnce", "Animais por vez", 1, 8, 1)}
@@ -2071,6 +2102,9 @@ function mountPanel(host, settings, change) {
     }
     $('[data-row="cell"]').classList.toggle("hidden", settings.style !== "mosaic");
     $("[data-pause]").textContent = settings.paused ? "Continuar" : "Pausar";
+    $("#observe").value = settings.observe ?? "";
+    const watched = KINDS.find((k) => k.name === settings.observe);
+    $("[data-note]").textContent = watched === void 0 ? "Escolha um animal para v\xEA-lo sozinho, no meio da tela." : `${watched.plan === "school" ? "Cada peixe mede" : "Comprimento:"} ${(watched.length / 80).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} m. A c\xE2mera acompanha o animal.`;
   }
   shadow.addEventListener("click", (e) => {
     const b = e.target.closest("button");
@@ -2091,6 +2125,7 @@ function mountPanel(host, settings, change) {
   });
   shadow.addEventListener("change", (e) => {
     const input = e.target;
+    if (input.id === "observe") set({ observe: input.value === "" ? null : input.value });
     if (input.dataset.kind !== void 0) {
       const kind = input.dataset.kind;
       set({ species: input.checked ? [...settings.species, kind] : settings.species.filter((n) => n !== kind) });
@@ -2107,7 +2142,10 @@ function mountPanel(host, settings, change) {
   });
   if (host.clientWidth < 640) wrap.classList.add("closed");
   refresh();
-  return () => root.remove();
+  return {
+    remove: () => root.remove(),
+    covered: () => wrap.classList.contains("closed") ? 0 : host.getBoundingClientRect().right - $(".panel").getBoundingClientRect().left
+  };
 }
 
 // src/index.ts
@@ -2148,7 +2186,8 @@ function mountSharkNight(host, options = {}) {
     atOnce: options.atOnce ?? 4,
     species: options.species ?? KINDS.map((k) => k.name),
     speed: options.speed ?? 1,
-    paused: false
+    paused: false,
+    observe: null
   };
   if (options.controls === true) {
     try {
@@ -2163,9 +2202,11 @@ function mountSharkNight(host, options = {}) {
     settings.atOnce = number(settings.atOnce, 1, 8, 4);
     settings.speed = [0.5, 1, 2].includes(settings.speed) ? settings.speed : 1;
     settings.species = Array.isArray(settings.species) ? KINDS.map((k) => k.name).filter((n) => settings.species.includes(n)) : KINDS.map((k) => k.name);
+    settings.observe = null;
   }
   const darkWater = options.background ?? "#191919";
-  setWidth(1600 * Math.max(0.5, settings.zoomOut));
+  const normalWidth = () => 1600 * Math.max(0.5, settings.zoomOut);
+  setWidth(normalWidth());
   const tiles = tileTable();
   const canvas = document.createElement("canvas");
   canvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block";
@@ -2179,11 +2220,14 @@ function mountSharkNight(host, options = {}) {
   let scale = 1;
   let cols = 0;
   let rows = 0;
+  let watch;
+  let panel;
   function rules() {
     sea.atOnce = settings.atOnce;
     sea.allowed = new Set(KINDS.flatMap((k, i) => settings.species.includes(k.name) ? [i] : []));
   }
   function layout() {
+    setWidth(normalWidth());
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     canvas.width = Math.round(Math.max(1, host.clientWidth) * dpr);
     canvas.height = Math.round(Math.max(1, host.clientHeight) * dpr);
@@ -2191,12 +2235,58 @@ function mountSharkNight(host, options = {}) {
     sea = createSea(Math.round(canvas.height / scale));
     rules();
     water();
+    if (settings.observe !== null) observe(settings.observe);
+  }
+  function focusOf(a) {
+    if (a.fish.length > 0) return { x: a.fish.reduce((t, f) => t + f.x, 0) / a.fish.length, y: a.fish.reduce((t, f) => t + f.y, 0) / a.fish.length };
+    const frames = spineOf(a);
+    return frames[Math.floor(frames.length * 0.45)] ?? a;
+  }
+  function observe(name) {
+    if (name === null) {
+      watch = void 0;
+      setWidth(normalWidth());
+    } else {
+      const kind = KINDS.findIndex((k2) => k2.name === name);
+      const k = KINDS[kind];
+      const view2 = k.plan === "school" ? 1500 : Math.max(320, k.length * 2.2);
+      const world = Math.max(view2 * 4, 4e3);
+      setWidth(world);
+      const own = createSea(Math.round(world * canvas.height / canvas.width));
+      const focus = focusOf(place(own, kind));
+      watch = { sea: own, view: view2, x: focus.x, y: focus.y };
+    }
+    water();
+  }
+  function view() {
+    if (watch === void 0) return { animals: sea.animals, left: 0, top: 0, s: scale };
+    const s = canvas.width / watch.view;
+    const free = canvas.width - (panel?.covered() ?? 0) * (canvas.width / Math.max(1, host.clientWidth));
+    return { animals: watch.sea.animals, left: watch.x - free / 2 / s, top: watch.y - canvas.height / s / 2, s };
+  }
+  function specks(v) {
+    const g = watch.view / 6;
+    const dpr = canvas.width / Math.max(1, host.clientWidth);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = settings.theme === "light" ? "rgba(0,0,0,.14)" : "rgba(255,255,255,.18)";
+    const right = v.left + canvas.width / v.s;
+    const bottom = v.top + canvas.height / v.s;
+    for (let gx = Math.floor(v.left / g); gx * g < right; gx += 1) {
+      for (let gy = Math.floor(v.top / g); gy * g < bottom; gy += 1) {
+        const rand = rng(Math.imul(gx, 73856093) ^ Math.imul(gy, 19349663));
+        for (let i = 0; i < 3; i += 1) {
+          const x = ((gx + rand()) * g - v.left) * v.s;
+          const y = ((gy + rand()) * g - v.top) * v.s;
+          ctx.fillRect(x, y, 3 * dpr, 1.2 * dpr);
+        }
+      }
+    }
   }
   function water() {
     const cell = settings.cell;
     const light = settings.theme === "light";
-    cols = Math.ceil(WIDTH / cell);
-    rows = Math.ceil(sea.h / cell);
+    cols = Math.ceil(canvas.width / (cell * scale));
+    rows = Math.ceil(canvas.height / (cell * scale));
     low.width = cols;
     low.height = rows;
     still.width = canvas.width;
@@ -2219,6 +2309,8 @@ function mountSharkNight(host, options = {}) {
         sctx.lineTo(still.width, y);
       }
       sctx.stroke();
+    }
+    if (settings.style === "mosaic" && watch === void 0) {
       const rand = rng(99);
       sctx.fillStyle = light ? "rgba(0,0,0,.12)" : "rgba(255,255,255,.2)";
       for (let i = 0; i < 120; i += 1) {
@@ -2230,19 +2322,22 @@ function mountSharkNight(host, options = {}) {
   }
   function paint() {
     const cell = settings.cell;
+    const v = view();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(still, 0, 0);
+    if (watch !== void 0) specks(v);
     if (settings.style === "smooth") {
-      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      ctx.setTransform(v.s, 0, 0, v.s, -v.left * v.s, -v.top * v.s);
       ctx.lineJoin = "round";
-      for (const a of sea.animals) DRAW[KINDS[a.kind].plan](ctx, a, 0);
+      for (const a of v.animals) DRAW[KINDS[a.kind].plan](ctx, a, 0);
       return;
     }
+    const tu = cell * scale / v.s;
     lctx.setTransform(1, 0, 0, 1, 0, 0);
     lctx.clearRect(0, 0, cols, rows);
-    lctx.setTransform(1 / cell, 0, 0, 1 / cell, 0, 0);
+    lctx.setTransform(1 / tu, 0, 0, 1 / tu, -v.left / tu, -v.top / tu);
     lctx.lineJoin = "round";
-    for (const a of sea.animals) DRAW[KINDS[a.kind].plan](lctx, a, cell);
+    for (const a of v.animals) DRAW[KINDS[a.kind].plan](lctx, a, tu);
     const px = lctx.getImageData(0, 0, cols, rows).data;
     const size = cell * scale;
     const inset = Math.max(0.5, size * 0.06);
@@ -2278,7 +2373,17 @@ function mountSharkNight(host, options = {}) {
     last = now;
     let stepped = false;
     while (owed >= STEP3) {
-      stepSea(sea, STEP3, MARGIN);
+      if (watch === void 0) {
+        stepSea(sea, STEP3, MARGIN);
+      } else {
+        stepSea(watch.sea, STEP3, MARGIN);
+        const a = watch.sea.animals[0];
+        if (a !== void 0) {
+          const f = focusOf(a);
+          watch.x += (f.x - watch.x) * 0.04;
+          watch.y += (f.y - watch.y) * 0.04;
+        }
+      }
       owed -= STEP3;
       stepped = true;
     }
@@ -2311,6 +2416,7 @@ function mountSharkNight(host, options = {}) {
       layout();
       settle();
     }
+    if (patch.observe !== void 0) observe(patch.observe);
     if (patch.theme !== void 0 || patch.style !== void 0 || patch.cell !== void 0) water();
     if (patch.species !== void 0 || patch.atOnce !== void 0) {
       rules();
@@ -2325,13 +2431,13 @@ function mountSharkNight(host, options = {}) {
     } catch {
     }
   }
-  const panel = options.controls === true ? mountPanel(host, settings, apply) : void 0;
+  panel = options.controls === true ? mountPanel(host, settings, apply) : void 0;
   return () => {
     cancelAnimationFrame(frame);
     observer.disconnect();
     clearTimeout(resizing);
     canvas.remove();
-    panel?.();
+    panel?.remove();
   };
 }
 export {

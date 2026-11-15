@@ -12,7 +12,7 @@
 
 import { DRAW } from './draw/all'
 import { mountPanel, type Settings } from './panel'
-import { KINDS, WIDTH, createSea, setWidth, stepSea, type Kind, type Sea } from './sim'
+import { KINDS, WIDTH, createSea, place, setWidth, spineOf, stepSea, type Animal, type Kind, type Point, type Sea } from './sim'
 
 export type Options = {
   /** 'mosaic' (default): the animals as glyph tiles. 'smooth': the drawn animals themselves. */
@@ -81,6 +81,7 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     species: options.species ?? KINDS.map(k => k.name),
     speed: options.speed ?? 1,
     paused: false,
+    observe: null,
   }
   if (options.controls === true) {
     // The viewer's last choices, if this browser kept them.
@@ -98,9 +99,12 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     settings.atOnce = number(settings.atOnce, 1, 8, 4)
     settings.speed = [0.5, 1, 2].includes(settings.speed) ? settings.speed : 1
     settings.species = Array.isArray(settings.species) ? KINDS.map(k => k.name).filter(n => settings.species.includes(n)) : KINDS.map(k => k.name)
+    // Watching one animal is for now, not for next time.
+    settings.observe = null
   }
   const darkWater = options.background ?? '#191919'
-  setWidth(1600 * Math.max(0.5, settings.zoomOut))
+  const normalWidth = (): number => 1600 * Math.max(0.5, settings.zoomOut)
+  setWidth(normalWidth())
   const tiles = tileTable()
 
   const canvas = document.createElement('canvas')
@@ -119,6 +123,12 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
   let scale = 1
   let cols = 0
   let rows = 0
+  /**
+   * Watching one animal: a sea of its own, far wider than the view, with only that animal in it, and a camera that
+   * follows it, framed by its size. It swims, turns and bursts as ever; it just never leaves the middle of the view.
+   */
+  let watch: { sea: Sea; view: number; x: number; y: number } | undefined
+  let panel: ReturnType<typeof mountPanel> | undefined
 
   /** The sea's settings that the simulation reads: how many at once, which kinds. */
   function rules(): void {
@@ -128,6 +138,7 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
 
   /** A new sea the size of the window: on start, on resize, on a new zoom. */
   function layout(): void {
+    setWidth(normalWidth())
     const dpr = Math.min(2, window.devicePixelRatio || 1)
     canvas.width = Math.round(Math.max(1, host.clientWidth) * dpr)
     canvas.height = Math.round(Math.max(1, host.clientHeight) * dpr)
@@ -136,14 +147,74 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     sea = createSea(Math.round(canvas.height / scale))
     rules()
     water()
+    if (settings.observe !== null) observe(settings.observe)
+  }
+
+  /** Where the camera looks when watching: the middle of the body, or of the school. */
+  function focusOf(a: Animal): Point {
+    if (a.fish.length > 0) return { x: a.fish.reduce((t, f) => t + f.x, 0) / a.fish.length, y: a.fish.reduce((t, f) => t + f.y, 0) / a.fish.length }
+    const frames = spineOf(a)
+    return frames[Math.floor(frames.length * 0.45)] ?? a
+  }
+
+  /** Starts watching an animal of kind `name`, or stops (null): the open sea carries on where it was. */
+  function observe(name: Kind['name'] | null): void {
+    if (name === null) {
+      watch = undefined
+      setWidth(normalWidth())
+    } else {
+      const kind = KINDS.findIndex(k => k.name === name)
+      const k = KINDS[kind]!
+      // Framed so the animal takes a little under half the width; a school, its whole shoal.
+      const view = k.plan === 'school' ? 1500 : Math.max(320, k.length * 2.2)
+      const world = Math.max(view * 4, 4000)
+      setWidth(world)
+      const own = createSea(Math.round((world * canvas.height) / canvas.width))
+      const focus = focusOf(place(own, kind))
+      watch = { sea: own, view, x: focus.x, y: focus.y }
+    }
+    water()
+  }
+
+  /** What is drawn and from where: the open sea from its corner, or the watched animal from the camera. */
+  function view(): { animals: Animal[]; left: number; top: number; s: number } {
+    if (watch === undefined) return { animals: sea.animals, left: 0, top: 0, s: scale }
+    const s = canvas.width / watch.view
+    // In the middle of the water left free: the open panel covers the right of it.
+    const free = canvas.width - (panel?.covered() ?? 0) * (canvas.width / Math.max(1, host.clientWidth))
+    return { animals: watch.sea.animals, left: watch.x - free / 2 / s, top: watch.y - canvas.height / s / 2, s }
+  }
+
+  /**
+   * Specks drifting in the water while watching, fixed in the sea: as the camera follows the animal they stream past,
+   * so its own speed shows. Scattered by a hash of where they are, so the same water always holds the same specks.
+   */
+  function specks(v: ReturnType<typeof view>): void {
+    const g = watch!.view / 6
+    const dpr = canvas.width / Math.max(1, host.clientWidth)
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.fillStyle = settings.theme === 'light' ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.18)'
+    const right = v.left + canvas.width / v.s
+    const bottom = v.top + canvas.height / v.s
+    for (let gx = Math.floor(v.left / g); gx * g < right; gx += 1) {
+      for (let gy = Math.floor(v.top / g); gy * g < bottom; gy += 1) {
+        const rand = rng(Math.imul(gx, 73856093) ^ Math.imul(gy, 19349663))
+        for (let i = 0; i < 3; i += 1) {
+          const x = ((gx + rand()) * g - v.left) * v.s
+          const y = ((gy + rand()) * g - v.top) * v.s
+          ctx.fillRect(x, y, 3 * dpr, 1.2 * dpr)
+        }
+      }
+    }
   }
 
   /** The still water, drawn once for each theme, style and tile: in the mosaic, a faint grid and a few dashes. */
   function water(): void {
     const cell = settings.cell
     const light = settings.theme === 'light'
-    cols = Math.ceil(WIDTH / cell)
-    rows = Math.ceil(sea.h / cell)
+    // As many tiles as fit the window at the open sea's scale (the sea's width may be a watched animal's world).
+    cols = Math.ceil(canvas.width / (cell * scale))
+    rows = Math.ceil(canvas.height / (cell * scale))
     low.width = cols
     low.height = rows
     still.width = canvas.width
@@ -166,6 +237,9 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
         sctx.lineTo(still.width, y)
       }
       sctx.stroke()
+    }
+    // The fixed dashes only in the open sea: while watching, drifting specks show the water instead.
+    if (settings.style === 'mosaic' && watch === undefined) {
       const rand = rng(99)
       sctx.fillStyle = light ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.2)'
       for (let i = 0; i < 120; i += 1) {
@@ -178,19 +252,23 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
 
   function paint(): void {
     const cell = settings.cell
+    const v = view()
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.drawImage(still, 0, 0)
+    if (watch !== undefined) specks(v)
     if (settings.style === 'smooth') {
-      ctx.setTransform(scale, 0, 0, scale, 0, 0)
+      ctx.setTransform(v.s, 0, 0, v.s, -v.left * v.s, -v.top * v.s)
       ctx.lineJoin = 'round'
-      for (const a of sea.animals) DRAW[KINDS[a.kind]!.plan](ctx, a, 0)
+      for (const a of v.animals) DRAW[KINDS[a.kind]!.plan](ctx, a, 0)
       return
     }
+    // The tiles keep their size on screen whatever the framing: closer in, a tile covers less of the animal.
+    const tu = (cell * scale) / v.s
     lctx.setTransform(1, 0, 0, 1, 0, 0)
     lctx.clearRect(0, 0, cols, rows)
-    lctx.setTransform(1 / cell, 0, 0, 1 / cell, 0, 0)
+    lctx.setTransform(1 / tu, 0, 0, 1 / tu, -v.left / tu, -v.top / tu)
     lctx.lineJoin = 'round'
-    for (const a of sea.animals) DRAW[KINDS[a.kind]!.plan](lctx, a, cell)
+    for (const a of v.animals) DRAW[KINDS[a.kind]!.plan](lctx, a, tu)
     const px = lctx.getImageData(0, 0, cols, rows).data
     const size = cell * scale
     const inset = Math.max(0.5, size * 0.06)
@@ -230,7 +308,18 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     last = now
     let stepped = false
     while (owed >= STEP) {
-      stepSea(sea, STEP, MARGIN)
+      if (watch === undefined) {
+        stepSea(sea, STEP, MARGIN)
+      } else {
+        stepSea(watch.sea, STEP, MARGIN)
+        // The camera eases after the animal, so a burst or a turn shows as the animal moving in the frame.
+        const a = watch.sea.animals[0]
+        if (a !== undefined) {
+          const f = focusOf(a)
+          watch.x += (f.x - watch.x) * 0.04
+          watch.y += (f.y - watch.y) * 0.04
+        }
+      }
       owed -= STEP
       stepped = true
     }
@@ -267,6 +356,7 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
       layout()
       settle()
     }
+    if (patch.observe !== undefined) observe(patch.observe)
     if (patch.theme !== undefined || patch.style !== undefined || patch.cell !== undefined) water()
     if (patch.species !== undefined || patch.atOnce !== undefined) {
       rules()
@@ -283,13 +373,13 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
       // Not remembered: no storage here.
     }
   }
-  const panel = options.controls === true ? mountPanel(host, settings, apply) : undefined
+  panel = options.controls === true ? mountPanel(host, settings, apply) : undefined
 
   return () => {
     cancelAnimationFrame(frame)
     observer.disconnect()
     clearTimeout(resizing)
     canvas.remove()
-    panel?.()
+    panel?.remove()
   }
 }

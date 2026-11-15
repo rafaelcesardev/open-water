@@ -23,6 +23,7 @@ Um mar escuro visto de cima, ao vivo, e os animais que passam por ele no tamanho
 
 Um painel flutuante à direita, de vidro fosco transparente (os animais aparecem passando por trás), para mudar tudo ao vivo:
 
+- **Observar:** escolha um animal para vê-lo sozinho, para avaliar formato e movimento. Ele continua nadando, virando e acelerando como sempre, mas a câmera o acompanha e o mantém no meio da área livre, enquadrado pelo tamanho dele. Partículas na água passam por ele e mostram o deslocamento. O painel mostra o tamanho real do animal. "Mar aberto" volta para o mar de onde ele parou.
 - **Animais:** quantos podem aparecer de uma vez (1 a 8) e quais espécies podem entrar (com "Todas" e "Nenhuma"). Desligar uma espécie, ou diminuir o número, faz os que sobram irem embora nadando, sem sumir de repente.
 - **Visual:** tema escuro ou claro, mosaico ou liso, zoom (que recomeça a cena) e o tamanho do ladrilho do mosaico.
 - **Tempo:** velocidade 0,5×, 1× ou 2×, e pausar.

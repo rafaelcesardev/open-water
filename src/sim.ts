@@ -260,6 +260,36 @@ export function createSea(h: number): Sea {
   return { h, animals: [], next: 0, gone: -1, chases: 0, atOnce: 4, allowed: new Set(KINDS.map((_, i) => i)) }
 }
 
+/** An animal of `kind` with its head at (x, y), its body straight behind it, making for `to`. */
+function make(kind: number, x: number, y: number, heading: number, to: Point, random: () => number): Animal {
+  const k = KINDS[kind]!
+  const trail: Point[] = []
+  for (let back = STEP; back <= k.length * 1.25; back += STEP) trail.push({ x: x - Math.cos(heading) * back, y: y - Math.sin(heading) * back })
+  const a: Animal = { kind, x, y, heading, curve: 0, speed: k.speed, pace: 1, paceFor: 0, tight: 0, way: 0, wayFrom: 0, mode: 'enter', modeFor: 0, prey: undefined, rest: 8 + random() * 12, to, stay: k.stay[0] + random() * (k.stay[1] - k.stay[0]), age: 0, seen: false, swum: random() * 500, trail, fish: [] }
+  if (k.plan === 'school') {
+    // The fish in a loose shoal behind and about the head of the school, all heading in.
+    for (let i = 0; i < 160; i += 1) {
+      const back = Math.sqrt(random()) * 380
+      const side = (random() - 0.5) * 320
+      a.fish.push({ x: x - Math.cos(heading) * back - Math.sin(heading) * side, y: y - Math.sin(heading) * back + Math.cos(heading) * side, vx: Math.cos(heading) * k.speed, vy: Math.sin(heading) * k.speed, swum: random() * 50, turn: 0 })
+    }
+  }
+  return a
+}
+
+/**
+ * Puts one animal of `kind` in the middle of the sea, to be watched: it swims, turns and bursts as it always does,
+ * but never leaves.
+ */
+export function place(sea: Sea, kind: number, random: () => number = Math.random): Animal {
+  const heading = random() * Math.PI * 2
+  const a = make(kind, WIDTH / 2, sea.h / 2, heading, { x: WIDTH / 2, y: sea.h / 2 }, random)
+  Object.assign(a, { mode: 'roam', stay: Infinity, seen: true })
+  sea.animals = [a]
+  sea.next = Infinity
+  return a
+}
+
 /**
  * Brings in a new animal, if one may come: of a kind not in view and not the one that just left, from beyond a
  * random edge at a random place along it, heading in, its body straight behind it. Not where another is about to
@@ -288,17 +318,7 @@ function arrive(sea: Sea, random: () => number): void {
     for (let d = -k.length; d <= k.length; d += 40) path.push({ x: x + Math.cos(heading) * d, y: y + Math.sin(heading) * d })
     const clear = others.every(({ o, discs }) => discs.every(c => path.every(p => Math.hypot(p.x - c.x, p.y - c.y) > c.r + k.reach + KINDS[o.kind]!.reach * 0.5)))
     if (!clear) continue
-    const trail: Point[] = []
-    for (let back = STEP; back <= k.length * 1.25; back += STEP) trail.push({ x: x - Math.cos(heading) * back, y: y - Math.sin(heading) * back })
-    const a: Animal = { kind, x, y, heading, curve: 0, speed: k.speed, pace: 1, paceFor: 0, tight: 0, way: 0, wayFrom: 0, mode: 'enter', modeFor: 0, prey: undefined, rest: 8 + random() * 12, to, stay: k.stay[0] + random() * (k.stay[1] - k.stay[0]), age: 0, seen: false, swum: random() * 500, trail, fish: [] }
-    if (k.plan === 'school') {
-      // The fish in a loose shoal behind and about the head of the school, all heading in.
-      for (let i = 0; i < 160; i += 1) {
-        const back = Math.sqrt(random()) * 380
-        const side = (random() - 0.5) * 320
-        a.fish.push({ x: x - Math.cos(heading) * back - Math.sin(heading) * side, y: y - Math.sin(heading) * back + Math.cos(heading) * side, vx: Math.cos(heading) * k.speed, vy: Math.sin(heading) * k.speed, swum: random() * 50, turn: 0 })
-      }
-    }
+    const a = make(kind, x, y, heading, to, random)
     sea.animals.push(a)
     // The next a few seconds on at the soonest: they come in one by one.
     sea.next = 2 + random() * 5

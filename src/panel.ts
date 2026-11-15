@@ -17,6 +17,8 @@ export type Settings = {
   /** How fast time runs, and whether it is stopped. */
   speed: number
   paused: boolean
+  /** One animal watched alone, kept in the middle of the view; null for the open sea. */
+  observe: Kind['name'] | null
 }
 
 /** Each kind's name in Portuguese and a dot of its real colour. */
@@ -48,6 +50,7 @@ const CSS = `
   --chip-on: rgba(255, 255, 255, 0.16);
   --accent: #8fd3e8;
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.38);
+  color-scheme: dark;
   /* Over thin glass, a soft shadow keeps the text legible whatever swims behind. */
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   font: 13px/1.35 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -71,6 +74,7 @@ const CSS = `
   --chip-on: rgba(20, 30, 40, 0.12);
   --accent: #1f7d99;
   --shadow: 0 18px 50px rgba(30, 50, 70, 0.20);
+  color-scheme: light;
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
 }
 .glass {
@@ -151,14 +155,25 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 2px 0 0;
 .wide:hover { background: var(--chip-on); }
 .fab { width: 46px; height: 46px; border-radius: 16px; display: grid; place-items: center; color: var(--text); }
 .hidden { display: none; }
+.select { position: relative; }
+.select select {
+  appearance: none; -webkit-appearance: none; width: 100%; font: inherit; color: inherit;
+  background: var(--chip); border: 1px solid var(--edge); border-radius: 12px; padding: 8px 32px 8px 12px; cursor: pointer;
+}
+.select select:hover { background: var(--chip-on); }
+.select svg { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--muted); }
+.note { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 `
 
 const SLIDERS = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>'
 const CLOSE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>'
 
-/** Builds the panel in `host`. `change` is told every change the viewer makes. Returns a function that removes it. */
-export function mountPanel(host: HTMLElement, settings: Settings, change: (patch: Partial<Settings>) => void): () => void {
+/**
+ * Builds the panel in `host`. `change` is told every change the viewer makes. Returns how to remove it, and how much
+ * of the host's width (CSS pixels, from the right) it covers while open.
+ */
+export function mountPanel(host: HTMLElement, settings: Settings, change: (patch: Partial<Settings>) => void): { remove: () => void; covered: () => number } {
   const root = document.createElement('div')
   host.appendChild(root)
   const shadow = root.attachShadow({ mode: 'open' })
@@ -170,6 +185,14 @@ export function mountPanel(host: HTMLElement, settings: Settings, change: (patch
   <div class="wrap">
     <div class="panel glass" id="panel" role="region" aria-label="Controles do Shark Night">
       <header><h1>Shark Night</h1><button type="button" class="icon" data-collapse aria-label="Recolher controles" aria-controls="panel">${CLOSE}</button></header>
+      <section>
+        <h2>Observar</h2>
+        <div class="select"><select id="observe" aria-label="Observar um animal sozinho">
+          <option value="">Mar aberto</option>
+          ${KINDS.map(k => `<option value="${k.name}">${LABELS[k.name][0]}</option>`).join('')}
+        </select><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
+        <p class="note" data-note></p>
+      </section>
       <section>
         <h2>Animais</h2>
         ${slider('atOnce', 'Animais por vez', 1, 8, 1)}
@@ -215,6 +238,11 @@ export function mountPanel(host: HTMLElement, settings: Settings, change: (patch
     // The tile only matters in the mosaic.
     $<HTMLDivElement>('[data-row="cell"]').classList.toggle('hidden', settings.style !== 'mosaic')
     $<HTMLButtonElement>('[data-pause]').textContent = settings.paused ? 'Continuar' : 'Pausar'
+    $<HTMLSelectElement>('#observe').value = settings.observe ?? ''
+    const watched = KINDS.find(k => k.name === settings.observe)
+    // Its real size, to judge the shape by.
+    $<HTMLParagraphElement>('[data-note]').textContent =
+      watched === undefined ? 'Escolha um animal para vê-lo sozinho, no meio da tela.' : `${watched.plan === 'school' ? 'Cada peixe mede' : 'Comprimento:'} ${(watched.length / 80).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} m. A câmera acompanha o animal.`
   }
 
   shadow.addEventListener('click', e => {
@@ -236,6 +264,7 @@ export function mountPanel(host: HTMLElement, settings: Settings, change: (patch
   })
   shadow.addEventListener('change', e => {
     const input = e.target as HTMLInputElement
+    if (input.id === 'observe') set({ observe: input.value === '' ? null : (input.value as Kind['name']) })
     if (input.dataset.kind !== undefined) {
       const kind = input.dataset.kind as Kind['name']
       set({ species: input.checked ? [...settings.species, kind] : settings.species.filter(n => n !== kind) })
@@ -255,5 +284,8 @@ export function mountPanel(host: HTMLElement, settings: Settings, change: (patch
   // Folded away at first on a narrow screen, where it would cover most of the sea.
   if (host.clientWidth < 640) wrap.classList.add('closed')
   refresh()
-  return () => root.remove()
+  return {
+    remove: () => root.remove(),
+    covered: () => (wrap.classList.contains('closed') ? 0 : host.getBoundingClientRect().right - $<HTMLDivElement>('.panel').getBoundingClientRect().left),
+  }
 }
