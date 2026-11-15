@@ -62,6 +62,7 @@ Opções:
 - `species`: as espécies que podem entrar, por nome (`'white'`, `'hammer'`, `'tiger'`, `'blacktip'`, `'blue'`, `'orca'`, `'dolphin'`, `'turtle'`, `'manta'`, `'squid'`, `'jacks'`). Padrão: todas.
 - `speed`: velocidade do tempo. `1` é tempo real. Padrão `1`.
 - `surface`: `true` (padrão) liga a luz da superfície (cáusticas sobre os animais); `false` desliga.
+- `grid`: só no mosaico. `true` (padrão) mostra a grade fraca e os tracinhos sobre a água; `false` deixa a água lisa, só com os animais.
 - `background`: cor da água no tema escuro. Padrão `#191919`.
 - `controls`: `true` mostra o painel de controles. Padrão `false`, para quem incorpora num site não ganhar um painel sem pedir. O `index.html` liga.
 
@@ -69,7 +70,7 @@ Com "reduzir movimento" ligado no sistema, mostra uma cena parada.
 
 ## Tema do Claude
 
-O mar do Open Water ao vivo atrás da conversa no app desktop do Claude e no celular, em mosaico, com as cores do app tiradas dele. Acompanha o modo do app: mar à noite no escuro, água clara no claro. No terminal e nos editores (VS Code, JetBrains) o tema não desenha nada.
+Os animais do Open Water passando ao vivo atrás da conversa no app desktop do Claude e no celular, em mosaico. O tema não mexe em nenhuma cor do app: a água é o próprio fundo do app em cada modo, lisa, e só os animais se movem por cima. No terminal e nos editores (VS Code, JetBrains) o tema não desenha nada.
 
 ### Instalar
 
@@ -102,16 +103,16 @@ claude plugin uninstall open-water            # tira o tema; o app volta ao visu
 
 ### O que esperar
 
-- Até 5 animais de uma vez: os quatro tubarões, orca, golfinho, tartaruga, manta e lula-gigante. A baleia-azul e o cardume ficam de fora, porque são os que mais pesam para o app.
+- Até 4 animais de uma vez: os quatro tubarões, orca, golfinho, tartaruga, manta e lula-gigante. A baleia-azul e o cardume ficam de fora, porque são os que mais pesam para o app.
 - O mod roda a simulação no seu computador: uns 5% de um núcleo, em média.
-- Sem a luz da superfície (cáusticas).
-- O mar segue o modo claro ou escuro que o app passa para o fundo (`prefers-color-scheme`); o resto das cores do app segue o modo dele direto.
+- Sem a luz da superfície (cáusticas), sem a grade e sem os tracinhos da página.
+- O mar segue o modo claro ou escuro que o app passa para o fundo (`prefers-color-scheme`), na cor de fundo do app em cada um (`#191919` no escuro, `#f9f9f7` no claro). Os painéis ficam sem véu e sem desfoque, então a tela fica de um tom só.
 
 ### Como funciona
 
-O app aceita como fundo um SVG sem script, redesenhado no máximo 10 vezes por segundo. Então o mod (`theme/`) roda a simulação ele mesmo e, a cada segundo, manda o trecho seguinte do mar como um SVG que se anima sozinho. Cada trecho já está pronto antes da troca, começa um décimo de segundo adiante (o tempo que o app leva para mostrá-lo) e traz 0,3 segundo a mais no fim, para continuar nadando se a troca atrasar. Continua ao vivo: cada trecho é simulado na hora.
+O app aceita como fundo um SVG sem script, redesenhado no máximo 10 vezes por segundo. Então o mod (`theme/`) roda a simulação ele mesmo e, a cada 2 segundos, manda o trecho seguinte do mar como um SVG que se anima sozinho. O app desenha cada SVG num quadro novo, então menos trocas são menos chances de engasgar. Cada trecho começa onde o anterior estava na tela, pelo tempo real que ele ficou lá (o relógio nunca dispara exatamente no tempo), e traz 0,3 segundo a mais no fim, para continuar nadando se a troca atrasar. Continua ao vivo: cada trecho é simulado na hora.
 
-- **Mosaico** (padrão): sem canvas, cada corpo é pintado numa grade de amostras (`src/mosaic.ts`), dois por dois por ladrilho, e o ladrilho acende onde o corpo cobre a maior parte dele, como na página. O SVG traz os ladrilhos do primeiro momento e, até 20 vezes por segundo, só os que mudaram. Os tons, as letras e as frestas são uma camada parada por cima, na cor da água, então só aparecem sobre um ladrilho aceso, e o app só redesenha onde os ladrilhos mudam. Um animal fundo é um ladrilho meio transparente sobre a água, então a mesma imagem serve aos dois modos. Quando um trecho passa do limite do app (131.072 caracteres), ele manda menos momentos por segundo.
+- **Mosaico** (padrão): sem canvas, cada corpo é pintado numa grade de amostras (`src/mosaic.ts`), dois por dois por ladrilho, e o ladrilho acende onde o corpo cobre a maior parte dele, como na página. O SVG traz os ladrilhos do primeiro momento e, até 10 vezes por segundo, só os que mudaram. Os tons, as letras e as frestas são uma camada parada por cima, na cor da água, então só aparecem sobre um ladrilho aceso, e o app só redesenha onde os ladrilhos mudam. Um animal fundo é um ladrilho meio transparente sobre a água, então a mesma imagem serve aos dois modos. Quando um trecho passa do limite do app (131.072 caracteres), ele manda menos momentos por segundo.
 - **Liso** (`style: 'smooth'`): o corpo desenhado, movido entre amostras por SMIL. Um animal por vez, e só os que cabem no limite (os quatro tubarões, orca, golfinho e manta).
 
 ### Desenvolver

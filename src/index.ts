@@ -32,6 +32,9 @@ export type Options = {
   speed?: number
   /** Light from the surface: caustics rippling over the animals, the shallower the brighter. Default true. */
   surface?: boolean
+  /** Mosaic only: the faint grid and the loose dashes over the water. false leaves the water plain, the animals
+   * alone on it. Default true. */
+  grid?: boolean
   /** The dark theme's water. Default #191919. */
   background?: string
   /** A floating panel on the right to change all of the above as it runs; the viewer's choices are remembered. */
@@ -109,6 +112,7 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
     observe: null,
     level: 1,
     surface: options.surface ?? true,
+    grid: options.grid ?? true,
   }
   if (options.controls === true) {
     // The viewer's last choices, if this browser kept them.
@@ -126,6 +130,7 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
     settings.atOnce = number(settings.atOnce, 1, 8, 4)
     settings.speed = [0.5, 1, 2].includes(settings.speed) ? settings.speed : 1
     settings.surface = settings.surface !== false
+    settings.grid = settings.grid !== false
     settings.level = [1, 2, 3].includes(settings.level) ? settings.level : 1
     settings.species = Array.isArray(settings.species) ? KINDS.map(k => k.name).filter(n => settings.species.includes(n)) : KINDS.map(k => k.name)
     // Watching one animal is for now, not for next time.
@@ -293,7 +298,7 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
     }
   }
 
-  /** The still water, drawn once for each theme, style and tile: in the mosaic, a faint grid and a few dashes. */
+  /** The still water, drawn once for each theme, style, tile and grid: in the mosaic, a faint grid and a few dashes. */
   function water(): void {
     const cell = settings.cell
     const light = settings.theme === 'light'
@@ -308,7 +313,7 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
     const sctx = still.getContext('2d')!
     sctx.fillStyle = light ? LIGHT : darkWater
     sctx.fillRect(0, 0, still.width, still.height)
-    if (settings.style === 'mosaic') {
+    if (settings.style === 'mosaic' && settings.grid) {
       sctx.strokeStyle = light ? 'rgba(0,0,0,.05)' : 'rgba(255,255,255,.028)'
       sctx.lineWidth = 1
       sctx.beginPath()
@@ -325,7 +330,7 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
       sctx.stroke()
     }
     // The fixed dashes only in the open sea: while watching, drifting specks show the water instead.
-    if (settings.style === 'mosaic' && watch === undefined) {
+    if (settings.style === 'mosaic' && settings.grid && watch === undefined) {
       const rand = rng(99)
       sctx.fillStyle = light ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.2)'
       for (let i = 0; i < 120; i += 1) {
@@ -523,7 +528,7 @@ export function mountOpenWater(host: HTMLElement, options: Options = {}): () => 
       }
     }
     if (patch.observe !== undefined) observe(patch.observe)
-    if (patch.theme !== undefined || patch.style !== undefined || patch.cell !== undefined) water()
+    if (patch.theme !== undefined || patch.style !== undefined || patch.cell !== undefined || patch.grid !== undefined) water()
     if (patch.species !== undefined || patch.atOnce !== undefined) {
       rules()
       // Nothing vanishes: a kind no longer wanted, and the oldest beyond the new count, swim off.

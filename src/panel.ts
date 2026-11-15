@@ -29,6 +29,8 @@ export type Settings = {
   level: 1 | 2 | 3
   /** Light from the surface: caustics rippling over the animals. */
   surface: boolean
+  /** Mosaic only: the faint grid and loose dashes over the water; off, the water is plain. */
+  grid: boolean
 }
 
 type Name = Kind['name']
@@ -308,6 +310,7 @@ export function mountPanel(
           <input id="cell" type="range" min="6" max="20" step="1">
           <div class="ends"><span>Fino</span><span>Grosso</span></div>
         </div>
+        <div class="block pair" data-row="grid"><span>Grade</span>${seg('grid', 'Grade', [['on', 'Com'], ['off', 'Sem']])}</div>
         <div class="block pair"><span>Velocidade</span>${seg('speed', 'Velocidade', [['0.5', '0,5×'], ['1', '1×'], ['2', '2×']])}</div>
       </div>
 
@@ -381,6 +384,7 @@ export function mountPanel(
     for (const b of $$<HTMLButtonElement>('[data-style]')) b.setAttribute('aria-pressed', String(b.dataset.style === settings.style))
     for (const b of $$<HTMLButtonElement>('[data-level]')) b.setAttribute('aria-pressed', String(Number(b.dataset.level) === settings.level))
     for (const b of $$<HTMLButtonElement>('[data-surface]')) b.setAttribute('aria-pressed', String((b.dataset.surface === 'on') === settings.surface))
+    for (const b of $$<HTMLButtonElement>('[data-grid]')) b.setAttribute('aria-pressed', String((b.dataset.grid === 'on') === settings.grid))
     for (const b of $$<HTMLButtonElement>('[data-watch]')) b.setAttribute('aria-pressed', String(b.dataset.watch === settings.observe))
     if (settings.observe !== null) {
       $<HTMLElement>('[data-who]').textContent = LABELS[settings.observe][1]
@@ -392,6 +396,7 @@ export function mountPanel(
     $<HTMLSpanElement>('[data-value="cell"]').textContent = String(settings.cell)
     // The tile only matters in the mosaic.
     $<HTMLDivElement>('[data-row="cell"]').hidden = settings.style !== 'mosaic'
+    $<HTMLDivElement>('[data-row="grid"]').hidden = settings.style !== 'mosaic'
     status()
   }
 
@@ -410,6 +415,7 @@ export function mountPanel(
     else if (d.style !== undefined) set({ style: d.style as Settings['style'] })
     else if (d.level !== undefined) set({ level: Number(d.level) as Settings['level'] })
     else if (d.surface !== undefined) set({ surface: d.surface === 'on' })
+    else if (d.grid !== undefined) set({ grid: d.grid === 'on' })
     else if (b.hasAttribute('data-pause')) set({ paused: !settings.paused })
     else if (b.hasAttribute('data-less')) set({ atOnce: Math.max(1, settings.atOnce - 1) })
     else if (b.hasAttribute('data-more')) set({ atOnce: Math.min(8, settings.atOnce + 1) })

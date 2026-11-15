@@ -2205,6 +2205,7 @@ function mountPanel(host, settings, change, inView) {
           <input id="cell" type="range" min="6" max="20" step="1">
           <div class="ends"><span>Fino</span><span>Grosso</span></div>
         </div>
+        <div class="block pair" data-row="grid"><span>Grade</span>${seg("grid", "Grade", [["on", "Com"], ["off", "Sem"]])}</div>
         <div class="block pair"><span>Velocidade</span>${seg("speed", "Velocidade", [["0.5", "0,5\xD7"], ["1", "1\xD7"], ["2", "2\xD7"]])}</div>
       </div>
 
@@ -2264,6 +2265,7 @@ function mountPanel(host, settings, change, inView) {
     for (const b of $$("[data-style]")) b.setAttribute("aria-pressed", String(b.dataset.style === settings.style));
     for (const b of $$("[data-level]")) b.setAttribute("aria-pressed", String(Number(b.dataset.level) === settings.level));
     for (const b of $$("[data-surface]")) b.setAttribute("aria-pressed", String(b.dataset.surface === "on" === settings.surface));
+    for (const b of $$("[data-grid]")) b.setAttribute("aria-pressed", String(b.dataset.grid === "on" === settings.grid));
     for (const b of $$("[data-watch]")) b.setAttribute("aria-pressed", String(b.dataset.watch === settings.observe));
     if (settings.observe !== null) {
       $("[data-who]").textContent = LABELS[settings.observe][1];
@@ -2274,6 +2276,7 @@ function mountPanel(host, settings, change, inView) {
     $("#cell").value = String(settings.cell);
     $('[data-value="cell"]').textContent = String(settings.cell);
     $('[data-row="cell"]').hidden = settings.style !== "mosaic";
+    $('[data-row="grid"]').hidden = settings.style !== "mosaic";
     status();
   }
   shadow.addEventListener("click", (e) => {
@@ -2291,6 +2294,7 @@ function mountPanel(host, settings, change, inView) {
     else if (d.style !== void 0) set({ style: d.style });
     else if (d.level !== void 0) set({ level: Number(d.level) });
     else if (d.surface !== void 0) set({ surface: d.surface === "on" });
+    else if (d.grid !== void 0) set({ grid: d.grid === "on" });
     else if (b.hasAttribute("data-pause")) set({ paused: !settings.paused });
     else if (b.hasAttribute("data-less")) set({ atOnce: Math.max(1, settings.atOnce - 1) });
     else if (b.hasAttribute("data-more")) set({ atOnce: Math.min(8, settings.atOnce + 1) });
@@ -2383,7 +2387,8 @@ function mountOpenWater(host, options = {}) {
     paused: false,
     observe: null,
     level: 1,
-    surface: options.surface ?? true
+    surface: options.surface ?? true,
+    grid: options.grid ?? true
   };
   if (options.controls === true) {
     try {
@@ -2398,6 +2403,7 @@ function mountOpenWater(host, options = {}) {
     settings.atOnce = number(settings.atOnce, 1, 8, 4);
     settings.speed = [0.5, 1, 2].includes(settings.speed) ? settings.speed : 1;
     settings.surface = settings.surface !== false;
+    settings.grid = settings.grid !== false;
     settings.level = [1, 2, 3].includes(settings.level) ? settings.level : 1;
     settings.species = Array.isArray(settings.species) ? KINDS.map((k) => k.name).filter((n) => settings.species.includes(n)) : KINDS.map((k) => k.name);
     settings.observe = null;
@@ -2526,7 +2532,7 @@ function mountOpenWater(host, options = {}) {
     const sctx = still.getContext("2d");
     sctx.fillStyle = light ? LIGHT : darkWater;
     sctx.fillRect(0, 0, still.width, still.height);
-    if (settings.style === "mosaic") {
+    if (settings.style === "mosaic" && settings.grid) {
       sctx.strokeStyle = light ? "rgba(0,0,0,.05)" : "rgba(255,255,255,.028)";
       sctx.lineWidth = 1;
       sctx.beginPath();
@@ -2542,7 +2548,7 @@ function mountOpenWater(host, options = {}) {
       }
       sctx.stroke();
     }
-    if (settings.style === "mosaic" && watch === void 0) {
+    if (settings.style === "mosaic" && settings.grid && watch === void 0) {
       const rand = rng(99);
       sctx.fillStyle = light ? "rgba(0,0,0,.12)" : "rgba(255,255,255,.2)";
       for (let i = 0; i < 120; i += 1) {
@@ -2713,7 +2719,7 @@ function mountOpenWater(host, options = {}) {
       }
     }
     if (patch.observe !== void 0) observe(patch.observe);
-    if (patch.theme !== void 0 || patch.style !== void 0 || patch.cell !== void 0) water();
+    if (patch.theme !== void 0 || patch.style !== void 0 || patch.cell !== void 0 || patch.grid !== void 0) water();
     if (patch.species !== void 0 || patch.atOnce !== void 0) {
       rules();
       const oldest = [...sea.animals].sort((a, b) => b.age - a.age);
