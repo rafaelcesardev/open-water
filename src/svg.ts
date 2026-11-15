@@ -46,7 +46,9 @@ export class SvgPath {
     this.parts.push(`L${num(x)} ${num(y)}`)
     this.to(x, y)
   }
+  // A curve with no point to start from starts at its first control point, as the canvas does.
   quadraticCurveTo(cx: number, cy: number, x: number, y: number): void {
+    if (!this.open) this.moveTo(cx, cy)
     this.parts.push(`Q${num(cx)} ${num(cy)} ${num(x)} ${num(y)}`)
     const [x0, y0] = this.here
     for (let i = 1; i <= 6; i += 1) {
@@ -56,6 +58,7 @@ export class SvgPath {
     }
   }
   bezierCurveTo(c1x: number, c1y: number, c2x: number, c2y: number, x: number, y: number): void {
+    if (!this.open) this.moveTo(c1x, c1y)
     this.parts.push(`C${num(c1x)} ${num(c1y)} ${num(c2x)} ${num(c2y)} ${num(x)} ${num(y)}`)
     const [x0, y0] = this.here
     for (let i = 1; i <= 8; i += 1) {

@@ -1937,7 +1937,9 @@ var SvgPath = class {
     this.parts.push(`L${num(x)} ${num(y)}`);
     this.to(x, y);
   }
+  // A curve with no point to start from starts at its first control point, as the canvas does.
   quadraticCurveTo(cx, cy, x, y) {
+    if (!this.open) this.moveTo(cx, cy);
     this.parts.push(`Q${num(cx)} ${num(cy)} ${num(x)} ${num(y)}`);
     const [x0, y0] = this.here;
     for (let i = 1; i <= 6; i += 1) {
@@ -1947,6 +1949,7 @@ var SvgPath = class {
     }
   }
   bezierCurveTo(c1x, c1y, c2x, c2y, x, y) {
+    if (!this.open) this.moveTo(c1x, c1y);
     this.parts.push(`C${num(c1x)} ${num(c1y)} ${num(c2x)} ${num(c2y)} ${num(x)} ${num(y)}`);
     const [x0, y0] = this.here;
     for (let i = 1; i <= 8; i += 1) {
@@ -2124,13 +2127,19 @@ function tileTable() {
   }
   return { shade, glyph };
 }
+var NAMED = { transparent: [0, 0, 0, 0], black: [0, 0, 0, 1], white: [255, 255, 255, 1] };
 function parseColor(s) {
   if (s.startsWith("#")) {
     const h = s.length === 4 ? [...s.slice(1)].map((c) => c + c).join("") : s.slice(1);
     return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16), 1];
   }
-  const [r = 0, g = 0, b = 0, a = 1] = s.replace(/[^\d.,]/g, "").split(",").map(Number);
-  return [r, g, b, a];
+  if (/^rgba?\(/.test(s)) {
+    const [r = 0, g = 0, b = 0, a = 1] = s.replace(/[^\d.,]/g, "").split(",").map(Number);
+    return [r, g, b, a];
+  }
+  const named = NAMED[s.trim().toLowerCase()];
+  if (named === void 0) throw new Error(`mosaic: no colour ${JSON.stringify(s)} here; add it to NAMED`);
+  return named;
 }
 var Gradient = class {
   constructor(at2) {

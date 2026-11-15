@@ -42,6 +42,12 @@ export const register: Register = on => {
   // The next stretch, made ahead, so a swap never waits for the sea to be worked out.
   let ready = sea.next()
   let timer: { cancel: () => void } | undefined
+  let making: { cancel: () => void } | undefined
+  const stop = (): void => {
+    timer?.cancel()
+    making?.cancel()
+    timer = making = undefined
+  }
 
   on('session.start', async ($, e, next) => {
     const unpainted = problems.find(line => line.startsWith("Desktop won't paint"))
@@ -49,15 +55,21 @@ export const register: Register = on => {
     // Not drawn in the terminal and editors, and that is fine: the backdrop is only for the app.
     await $.theme.set(LOOK)
     // The next stretch of sea as the last one ends.
-    timer?.cancel()
+    stop()
     timer = $.clock.every(SECONDS * 1000, () => {
       svg = ready
       $.ui.invalidate('ui.render')
       // Made a moment after the swap, so the work never holds the swap's drawing back.
-      $.clock.after(100, () => {
+      making = $.clock.after(100, () => {
         ready = sea.next()
       })
     })
+    return next(e)
+  })
+
+  // No sea worked out for a session that has ended.
+  on('session.end', ($, e, next) => {
+    stop()
     return next(e)
   })
 

@@ -3,7 +3,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createBackdrop } from './backdrop.ts'
-import { animate, type El } from './svg.ts'
+import { parseColor } from './mosaic.ts'
+import { SvgPath, animate, type El } from './svg.ts'
 
 test('each send fits the app and moves, for every kind the smooth style lets in', () => {
   for (const name of ['white', 'hammer', 'tiger', 'blacktip', 'orca', 'dolphin', 'manta'] as const) {
@@ -34,4 +35,22 @@ test('a shape that changes its commands is a cut, not a morph', () => {
   const cut = animate([at('M0 0L1 1'), at('M0 0Q1 1 2 2')], 0.5)
   assert.ok(!cut.includes('<animate '))
   assert.match(cut, /<set attributeName="visibility" to="visible" begin="0.5s"\/>/)
+})
+
+test('a curve with no point to start from starts at its first control point, as on a canvas', () => {
+  const q = new SvgPath()
+  q.quadraticCurveTo(1, 2, 3, 4)
+  assert.ok(q.d.startsWith('M1 2Q1 2 3 4'))
+  assert.deepEqual(q.polys[0]!.slice(0, 2), [1, 2])
+  const c = new SvgPath()
+  c.bezierCurveTo(5, 6, 7, 8, 9, 10)
+  assert.ok(c.d.startsWith('M5 6C'))
+})
+
+test('colours: hex, rgb(a) and a few names; anything else throws instead of painting black', () => {
+  assert.deepEqual(parseColor('#fff'), [255, 255, 255, 1])
+  assert.deepEqual(parseColor('rgba(30,46,60,.2)'), [30, 46, 60, 0.2])
+  assert.deepEqual(parseColor('transparent'), [0, 0, 0, 0])
+  assert.deepEqual(parseColor('White'), [255, 255, 255, 1])
+  assert.throws(() => parseColor('teal'), /teal/)
 })

@@ -47,14 +47,22 @@ export function tileTable(): { shade: number[]; glyph: string[] } {
 
 type RGBA = [number, number, number, number]
 
-/** '#rgb', '#rrggbb', 'rgb(...)' or 'rgba(...)'. */
+const NAMED: Record<string, RGBA> = { transparent: [0, 0, 0, 0], black: [0, 0, 0, 1], white: [255, 255, 255, 1] }
+
+/** '#rgb', '#rrggbb', 'rgb(...)', 'rgba(...)', or one of the few names in NAMED. Any other colour throws, so a
+ * drawing that starts using one fails in the tests instead of painting black. */
 export function parseColor(s: string): RGBA {
   if (s.startsWith('#')) {
     const h = s.length === 4 ? [...s.slice(1)].map(c => c + c).join('') : s.slice(1)
     return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16), 1]
   }
-  const [r = 0, g = 0, b = 0, a = 1] = s.replace(/[^\d.,]/g, '').split(',').map(Number)
-  return [r, g, b, a]
+  if (/^rgba?\(/.test(s)) {
+    const [r = 0, g = 0, b = 0, a = 1] = s.replace(/[^\d.,]/g, '').split(',').map(Number)
+    return [r, g, b, a]
+  }
+  const named = NAMED[s.trim().toLowerCase()]
+  if (named === undefined) throw new Error(`mosaic: no colour ${JSON.stringify(s)} here; add it to NAMED`)
+  return named
 }
 
 class Gradient {
