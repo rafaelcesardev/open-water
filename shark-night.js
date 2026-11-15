@@ -2036,8 +2036,9 @@ h1 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: 0.01em; }
 .page[hidden] { display: none; }
 .shared { padding: 4px 18px 14px; border-top: 1px solid var(--track); }
 .section { margin: 12px 0 0; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
-.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.two .segmented button { padding: 7px 4px; gap: 5px; }
+.pair { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pair > span { font-weight: 600; }
+.pair .segmented { width: 184px; flex: none; }
 .block { margin-top: 12px; }
 .label { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
 .label span:first-child { font-weight: 600; }
@@ -2141,7 +2142,8 @@ function mountPanel(host, settings, change, inView) {
 
       <div class="shared">
         <div class="section">Visualiza\xE7\xE3o</div>
-        <div class="block two">${seg("theme", "Tema", [["dark", `${ICONS.moon}Escuro`], ["light", `${ICONS.sun}Claro`]])}${seg("style", "Estilo", [["mosaic", "Mosaico"], ["smooth", "Liso"]])}</div>
+        <div class="block pair"><span>Tema</span>${seg("theme", "Tema", [["dark", `${ICONS.moon}Escuro`], ["light", `${ICONS.sun}Claro`]])}</div>
+        <div class="block pair"><span>Estilo</span>${seg("style", "Estilo", [["mosaic", "Mosaico"], ["smooth", "Liso"]])}</div>
         <div class="block">
           <div class="label"><label for="zoomOut">Dist\xE2ncia</label><span class="hint" data-value="zoomOut"></span></div>
           <input id="zoomOut" type="range" min="0.6" max="3" step="0.1">
@@ -2152,7 +2154,7 @@ function mountPanel(host, settings, change, inView) {
           <input id="cell" type="range" min="6" max="20" step="1">
           <div class="ends"><span>Fino</span><span>Grosso</span></div>
         </div>
-        <div class="block"><div class="label"><span>Velocidade</span></div>${seg("speed", "Velocidade", [["0.5", "0,5\xD7"], ["1", "1\xD7"], ["2", "2\xD7"]])}</div>
+        <div class="block pair"><span>Velocidade</span>${seg("speed", "Velocidade", [["0.5", "0,5\xD7"], ["1", "1\xD7"], ["2", "2\xD7"]])}</div>
       </div>
 
       <footer><span><kbd>Espa\xE7o</kbd> pausa</span><span><kbd>H</kbd> esconde</span><span><kbd>\u2190</kbd><kbd>\u2192</kbd> troca o animal</span><span><kbd>Esc</kbd> volta ao mar</span></footer>
