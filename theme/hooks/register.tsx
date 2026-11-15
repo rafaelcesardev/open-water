@@ -47,10 +47,11 @@ const SECONDS = 2
  * least to redraw. */
 const AT_ONCE = 4
 const SPECIES = ['white', 'hammer', 'tiger', 'blacktip', 'orca', 'dolphin', 'turtle', 'manta', 'squid']
-// The water is the app's own background in each mode (the design system's stock surface-0, as make-colors.js has it:
-// gray-900 by night, gray-20 by day), so the sea shows no colour of ours between the panels: the page's pale blue
-// water tinted the app's edges by day.
-const [WATER, LIGHT_WATER] = ['#0b0b0b', '#f9f9f7']
+// The water is the colour of the app's own panels in each mode, so a panel over it (60% of its colour, glass below)
+// comes out that same colour and the window is one even ground, as with no theme. By night it is measured off the
+// desktop app: darker water lit the text column up as a glow at its sides; the stock surface-0 (#0b0b0b) is darker
+// than what the app paints. By day the stock surface-0, not yet measured: the page's pale blue tinted the edges.
+const [WATER, LIGHT_WATER] = ['#181818', '#f9f9f7']
 // Only the sea is ours: the app's own colours stay as they are, in both modes. No blur on the panels: under a sea
 // that moves, the app would blur it again at every change.
 const LOOK: ThemeSetArgs = { backdrop: { scene: SCENE, glass: { blur: 0, opacity: 0.6 } } }
