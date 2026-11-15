@@ -2371,7 +2371,7 @@ var LEVELS = 10;
 function waterStyle(dark, light) {
   return `<style>.w{fill:${dark}}.ws{stroke:${dark}}.gl{fill-opacity:${1 - GLYPH_INK}}.ink{fill:#fff;fill-opacity:.2}.grid{stroke:#fff;stroke-opacity:.028}@media (prefers-color-scheme:light){.w{fill:${light}}.ws{stroke:${light}}.gl{fill-opacity:${GLYPH_LIFT}}.ink{fill:#000;fill-opacity:.12}.grid{stroke:#000;stroke-opacity:.05}}</style>`;
 }
-function createMosaic(width, height, tile) {
+function createMosaic(width, height, tile, texture = true) {
   const cols = Math.ceil(width / tile);
   const rows = Math.ceil(height / tile);
   const ctx = new RasterCtx(cols, rows, tile);
@@ -2396,8 +2396,8 @@ function createMosaic(width, height, tile) {
   const rand = rng(99);
   let dashes = "";
   for (let i = 0; i < 120; i += 1) dashes += `M${Math.floor(rand() * cols) * tile + tile * 0.3} ${Math.floor(rand() * rows) * tile + tile * 0.45}h${tile * 0.4}v${tile * 0.1}h${-tile * 0.4}z`;
-  const under = `<defs><pattern id="p" class="w" width="${span}" height="${span}" patternUnits="userSpaceOnUse">${shades}<g class="gl" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" font-size="${tile * 0.72}" text-anchor="middle" dominant-baseline="middle">${glyphs}</g><path class="ws" d="${gaps}" stroke-width="${tile * 0.12}"/></pattern><pattern id="grid" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse"><path class="grid" d="M0 0H${tile}M0 0V${tile}" fill="none"/></pattern></defs><path class="ink" d="${dashes}"/>`;
-  const over = `<rect width="${width}" height="${height}" fill="url(#p)"/><rect width="${width}" height="${height}" fill="url(#grid)"/>`;
+  const under = `<defs><pattern id="p" class="w" width="${span}" height="${span}" patternUnits="userSpaceOnUse">${shades}<g class="gl" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" font-size="${tile * 0.72}" text-anchor="middle" dominant-baseline="middle">${glyphs}</g><path class="ws" d="${gaps}" stroke-width="${tile * 0.12}"/></pattern><pattern id="grid" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse"><path class="grid" d="M0 0H${tile}M0 0V${tile}" fill="none"/></pattern></defs>` + (texture ? `<path class="ink" d="${dashes}"/>` : "");
+  const over = `<rect width="${width}" height="${height}" fill="url(#p)"/>${texture ? `<rect width="${width}" height="${height}" fill="url(#grid)"/>` : ""}`;
   const paths = (tiles) => {
     const byColour = /* @__PURE__ */ new Map();
     for (const [t, c] of tiles) (byColour.get(c) ?? byColour.set(c, []).get(c)).push(t);
@@ -2476,7 +2476,7 @@ function createBackdrop(o = {}) {
   sea.allowed = new Set(KINDS.map((k, i) => names.includes(k.name) ? i : -1).filter((i) => i >= 0));
   for (let t = 0; t < 6; t += STEP3) stepSea(sea, STEP3, MARGIN);
   const inOrder = () => [...sea.animals].sort((p, q) => q.depth - p.depth);
-  const tiles = createMosaic(width, height, o.cell ?? 10);
+  const tiles = createMosaic(width, height, o.cell ?? 10, o.texture ?? true);
   const shoot = () => {
     const shot = tiles.shot();
     for (const a of inOrder()) {

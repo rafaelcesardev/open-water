@@ -337,7 +337,7 @@ export type Shot = Int32Array
  * `waterStyle` classes, so one SVG serves both modes: a deep tile is see-through over whichever water is there.
  * shortcut: no tint toward the deep water's colour (the page tints by mode); add it per mode if the deep looks flat.
  */
-export function createMosaic(width: number, height: number, tile: number) {
+export function createMosaic(width: number, height: number, tile: number, texture = true) {
   const cols = Math.ceil(width / tile)
   const rows = Math.ceil(height / tile)
   const ctx = new RasterCtx(cols, rows, tile)
@@ -374,8 +374,9 @@ export function createMosaic(width: number, height: number, tile: number) {
     `<g class="gl" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" font-size="${tile * 0.72}" text-anchor="middle" dominant-baseline="middle">${glyphs}</g>` +
     `<path class="ws" d="${gaps}" stroke-width="${tile * 0.12}"/></pattern>` +
     `<pattern id="grid" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse"><path class="grid" d="M0 0H${tile}M0 0V${tile}" fill="none"/></pattern></defs>` +
-    `<path class="ink" d="${dashes}"/>`
-  const over = `<rect width="${width}" height="${height}" fill="url(#p)"/><rect width="${width}" height="${height}" fill="url(#grid)"/>`
+    (texture ? `<path class="ink" d="${dashes}"/>` : '')
+  // Without `texture`, no dashes or grid: the water is nothing but its colour, where no tile is lit.
+  const over = `<rect width="${width}" height="${height}" fill="url(#p)"/>${texture ? `<rect width="${width}" height="${height}" fill="url(#grid)"/>` : ''}`
 
   /** Paths of the tiles given, a path a colour, each row's neighbours of one colour one run, drawn as a line a tile
    * thick along the row's middle (shorter to write than its outline); in tile units. */

@@ -47,12 +47,24 @@ const SECONDS = 2
  * least to redraw. */
 const AT_ONCE = 4
 const SPECIES = ['white', 'hammer', 'tiger', 'blacktip', 'orca', 'dolphin', 'turtle', 'manta', 'squid']
+// The water is the app's own background in each mode (the design system's stock surface-0, as make-colors.js has it:
+// gray-900 by night, gray-20 by day), so the sea shows no colour of ours between the panels: the page's pale blue
+// water tinted the app's edges by day.
+const [WATER, LIGHT_WATER] = ['#0b0b0b', '#f9f9f7']
 // Only the sea is ours: the app's own colours stay as they are, in both modes. No blur on the panels: under a sea
 // that moves, the app would blur it again at every change.
 const LOOK: ThemeSetArgs = { backdrop: { scene: SCENE, glass: { blur: 0, opacity: 0.6 } } }
 
 export const register: Register = on => {
-  const sea = createBackdrop({ seconds: SECONDS, atOnce: AT_ONCE, species: SPECIES })
+  const sea = createBackdrop({
+    seconds: SECONDS,
+    atOnce: AT_ONCE,
+    species: SPECIES,
+    water: WATER,
+    lightWater: LIGHT_WATER,
+    // Nothing still of ours over the water: only the animals move over the app's background.
+    texture: false,
+  })
   let svg = sea.next()
   let timer: { cancel: () => void } | undefined
   const stop = (): void => {

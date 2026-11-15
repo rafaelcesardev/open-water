@@ -29,6 +29,8 @@ export type BackdropOptions = {
   /** The water at night and by day: the sea follows the app's dark and light mode. */
   water?: string
   lightWater?: string
+  /** The mosaic's dashes and faint grid over the water, still between the animals. Default true. */
+  texture?: boolean
   /** The most characters one send may be (the app takes 131072). */
   limit?: number
 }
@@ -66,7 +68,7 @@ export function createBackdrop(o: BackdropOptions = {}): Backdrop {
   // The deepest first: one nearer the surface passes over it.
   const inOrder = () => [...sea.animals].sort((p, q) => q.depth - p.depth)
 
-  const tiles = createMosaic(width, height, o.cell ?? 10)
+  const tiles = createMosaic(width, height, o.cell ?? 10, o.texture ?? true)
   const shoot = (): Shot => {
     const shot = tiles.shot()
     for (const a of inOrder()) {

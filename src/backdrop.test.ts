@@ -75,3 +75,10 @@ test('a send picks up where the last one was shown, early or late, and a very la
     assert.ok(performance.now() - t < 2000, `${shown}: ${Math.round(performance.now() - t)} ms`)
   }
 })
+
+test('without texture, nothing but the animals over the water', () => {
+  const svg = createBackdrop({ atOnce: 4, texture: false, water: '#0b0b0b', lightWater: '#f9f9f7' }).next()
+  assert.doesNotMatch(svg, /class="ink"|fill="url\(#grid\)"/)
+  assert.match(svg, /\.w\{fill:#0b0b0b\}.*\.w\{fill:#f9f9f7\}/)
+  assert.match(createBackdrop({ atOnce: 4 }).next(), /class="ink".*fill="url\(#grid\)"/)
+})
