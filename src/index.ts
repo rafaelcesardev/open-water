@@ -41,6 +41,7 @@ const SAVED = 'shark-night:settings'
 const GLYPHS = '$%tSX8@:;#S%X8tS'
 const SHADES = [1, 0.886, 0.776, 0.659]
 const GLYPH_INK = 0.227
+const GLYPH_LIFT = 0.72
 /** Seconds of sea a step of the simulation covers: one a frame at 60 frames a second. */
 const STEP = 1 / 60
 /** Units kept between bodies (the simulation's margin). */
@@ -127,7 +128,9 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
    * Watching one animal: a sea of its own, far wider than the view, with only that animal in it, and a camera that
    * follows it, framed by its size. It swims, turns and bursts as ever; it just never leaves the middle of the view.
    */
-  let watch: { sea: Sea; view: number; x: number; y: number } | undefined
+  let watch: { sea: Sea; kind: Kind; view: number; x: number; y: number } | undefined
+  /** The distance changed while watching: the open sea is laid out anew on going back to it. */
+  let stale = false
   let panel: ReturnType<typeof mountPanel> | undefined
 
   /** The sea's settings that the simulation reads: how many at once, which kinds. */
@@ -161,19 +164,29 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
   function observe(name: Kind['name'] | null): void {
     if (name === null) {
       watch = undefined
+      if (stale) {
+        stale = false
+        layout()
+        return
+      }
       setWidth(normalWidth())
     } else {
       const kind = KINDS.findIndex(k => k.name === name)
       const k = KINDS[kind]!
-      // Framed so the animal takes a little under half the width; a school, its whole shoal.
-      const view = k.plan === 'school' ? 1500 : Math.max(320, k.length * 2.2)
-      const world = Math.max(view * 4, 4000)
+      // Its own sea, wide enough that it roams freely even seen from furthest off.
+      const world = Math.max(framing(k, 3) * 4, 4000)
       setWidth(world)
       const own = createSea(Math.round((world * canvas.height) / canvas.width))
       const focus = focusOf(place(own, kind))
-      watch = { sea: own, view, x: focus.x, y: focus.y }
+      watch = { sea: own, kind: k, view: framing(k, settings.zoomOut), x: focus.x, y: focus.y }
     }
     water()
+  }
+
+  /** How wide a view frames a watched animal: at the default distance it takes a little under half the width (a
+   * school, its whole shoal); the distance setting moves the camera in or out from there. */
+  function framing(k: Kind, zoomOut: number): number {
+    return (k.plan === 'school' ? 1500 : Math.max(320, k.length * 2.2)) * (zoomOut / 1.5)
   }
 
   /** What is drawn and from where: the open sea from its corner, or the watched animal from the camera. */
@@ -271,6 +284,7 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     for (const a of v.animals) DRAW[KINDS[a.kind]!.plan](lctx, a, tu)
     const px = lctx.getImageData(0, 0, cols, rows).data
     const size = cell * scale
+    const light = settings.theme === 'light'
     const inset = Math.max(0.5, size * 0.06)
     ctx.font = `700 ${Math.max(4, Math.round(size * 0.72))}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`
     ctx.textAlign = 'center'
@@ -289,7 +303,10 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
         ctx.fillRect(x + inset, y + inset, size - 2 * inset, size - 2 * inset)
         const g = tiles.glyph[tile]!
         if (g !== '' && size >= 6) {
-          ctx.fillStyle = `rgb(${cr * GLYPH_INK},${cg * GLYPH_INK},${cb * GLYPH_INK})`
+          // The glyph cut into the tile: a darker shade of it on the night sea, a lighter one in pale water.
+          ctx.fillStyle = light
+            ? `rgb(${cr + (255 - cr) * GLYPH_LIFT},${cg + (255 - cg) * GLYPH_LIFT},${cb + (255 - cb) * GLYPH_LIFT})`
+            : `rgb(${cr * GLYPH_INK},${cg * GLYPH_INK},${cb * GLYPH_INK})`
           ctx.fillText(g, x + size / 2, y + size / 2 + size * 0.04)
         }
       }
@@ -352,9 +369,14 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
   /** A change from the panel, applied as the sea runs. */
   function apply(patch: Partial<Settings>): void {
     if (patch.zoomOut !== undefined) {
-      setWidth(1600 * Math.max(0.5, settings.zoomOut))
-      layout()
-      settle()
+      if (watch !== undefined) {
+        // Watching: only the camera moves in or out; the open sea waits for its new layout until it is back.
+        watch.view = framing(watch.kind, settings.zoomOut)
+        stale = true
+      } else {
+        layout()
+        settle()
+      }
     }
     if (patch.observe !== undefined) observe(patch.observe)
     if (patch.theme !== undefined || patch.style !== undefined || patch.cell !== undefined) water()
@@ -373,7 +395,7 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
       // Not remembered: no storage here.
     }
   }
-  panel = options.controls === true ? mountPanel(host, settings, apply) : undefined
+  panel = options.controls === true ? mountPanel(host, settings, apply, () => [...new Set(sea.animals.map(a => KINDS[a.kind]!.name))]) : undefined
 
   return () => {
     cancelAnimationFrame(frame)

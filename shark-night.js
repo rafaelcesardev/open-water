@@ -1899,34 +1899,62 @@ var DRAW = {
 
 // src/panel.ts
 var LABELS = {
-  white: ["Tubar\xE3o-branco", "#6b7378"],
-  hammer: ["Tubar\xE3o-martelo", "#7a796d"],
-  tiger: ["Tubar\xE3o-tigre", "#6c7670"],
-  blacktip: ["Galha-preta", "#7c786d"],
-  blue: ["Baleia-azul", "#566f80"],
-  orca: ["Orca", "#24272b"],
-  dolphin: ["Golfinho", "#666e75"],
-  turtle: ["Tartaruga-verde", "#7a6b45"],
-  manta: ["Manta", "#2b2f34"],
-  squid: ["Lula-gigante", "#7c2f2b"],
-  jacks: ["Cardume de xar\xE9us", "#a3afb5"]
+  white: ["Branco", "Tubar\xE3o-branco", "#7b8388"],
+  hammer: ["Martelo", "Tubar\xE3o-martelo", "#88877a"],
+  tiger: ["Tigre", "Tubar\xE3o-tigre", "#7b8580"],
+  blacktip: ["Galha-preta", "Galha-preta", "#8b877b"],
+  blue: ["Baleia-azul", "Baleia-azul", "#6d8799"],
+  orca: ["Orca", "Orca", "#2a2d31"],
+  dolphin: ["Golfinho", "Golfinho", "#7d858c"],
+  turtle: ["Tartaruga", "Tartaruga-verde", "#8a7a50"],
+  manta: ["Manta", "Manta", "#33373c"],
+  squid: ["Lula-gigante", "Lula-gigante", "#8a3a33"],
+  jacks: ["Xar\xE9us", "Cardume", "#a3afb5"]
+};
+var GROUPS = [
+  ["Tubar\xF5es", ["white", "hammer", "tiger", "blacktip"]],
+  ["Mam\xEDferos", ["blue", "orca", "dolphin"]],
+  ["Outros", ["turtle", "manta", "squid", "jacks"]]
+];
+var ORDER = GROUPS.flatMap(([, names]) => names);
+var metres = (n) => `${n.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} m`;
+var sizeOf = (name) => {
+  const k = KINDS.find((x) => x.name === name);
+  return k.plan === "school" ? `${metres(k.length / 80)} cada` : metres(k.length / 80);
+};
+var icon = (path, size = 18) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+var ICONS = {
+  pause: icon('<path d="M9 5v14M15 5v14"/>'),
+  play: icon('<path d="M7 5l12 7-12 7z" fill="currentColor"/>'),
+  sun: icon('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+  moon: icon('<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'),
+  hide: icon('<path d="M9 6l6 6-6 6"/>'),
+  sliders: icon('<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>'),
+  prev: icon('<path d="M15 6l-6 6 6 6"/>'),
+  next: icon('<path d="M9 6l6 6-6 6"/>'),
+  minus: icon('<path d="M6 12h12"/>', 16),
+  plus: icon('<path d="M12 6v12M6 12h12"/>', 16),
+  eye: icon('<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 15)
 };
 var CSS = `
 :host { all: initial; }
 * { box-sizing: border-box; }
 .wrap {
-  --glass: rgba(26, 29, 33, 0.2);
-  --edge: rgba(255, 255, 255, 0.10);
-  --shine: rgba(255, 255, 255, 0.07);
-  --text: #e9edef;
-  --muted: rgba(233, 237, 239, 0.58);
+  --glass: rgba(26, 29, 33, 0.22);
+  --edge: rgba(255, 255, 255, 0.12);
+  --shine: rgba(255, 255, 255, 0.08);
+  --text: #eef1f2;
+  --muted: rgba(238, 241, 242, 0.6);
+  --faint: rgba(238, 241, 242, 0.38);
   --track: rgba(255, 255, 255, 0.10);
   --chip: rgba(255, 255, 255, 0.06);
-  --chip-on: rgba(255, 255, 255, 0.16);
+  --chip-hover: rgba(255, 255, 255, 0.11);
+  --chip-on: rgba(255, 255, 255, 0.17);
   --accent: #8fd3e8;
+  --accent-ink: #0d2a33;
+  --live: #7ee0a1;
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.38);
   color-scheme: dark;
-  /* Over thin glass, a soft shadow keeps the text legible whatever swims behind. */
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   font: 13px/1.35 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--text);
@@ -1939,15 +1967,19 @@ var CSS = `
   z-index: 10;
 }
 .wrap.light {
-  --glass: rgba(255, 255, 255, 0.26);
+  --glass: rgba(255, 255, 255, 0.3);
   --edge: rgba(255, 255, 255, 0.75);
   --shine: rgba(255, 255, 255, 0.5);
-  --text: #1c2226;
-  --muted: rgba(28, 34, 38, 0.56);
+  --text: #1a2024;
+  --muted: rgba(26, 32, 36, 0.62);
+  --faint: rgba(26, 32, 36, 0.4);
   --track: rgba(20, 30, 40, 0.12);
   --chip: rgba(20, 30, 40, 0.05);
-  --chip-on: rgba(20, 30, 40, 0.12);
+  --chip-hover: rgba(20, 30, 40, 0.09);
+  --chip-on: rgba(20, 30, 40, 0.14);
   --accent: #1f7d99;
+  --accent-ink: #ffffff;
+  --live: #23935a;
   --shadow: 0 18px 50px rgba(30, 50, 70, 0.20);
   color-scheme: light;
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
@@ -1960,190 +1992,284 @@ var CSS = `
   box-shadow: var(--shadow), inset 0 1px 0 var(--shine);
 }
 .panel {
-  width: 292px;
+  width: 304px;
   max-width: calc(100vw - 32px);
   border-radius: 20px;
+  display: flex;
+  flex-direction: column;
   overflow: auto;
   overscroll-behavior: contain;
-  /* Still scrolls when the window is short, without a bar. */
   scrollbar-width: none;
 }
 .panel::-webkit-scrollbar { display: none; }
 .wrap.closed .panel { display: none; }
 .wrap:not(.closed) .fab { display: none; }
-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 16px 6px 18px;
-}
-h1 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: 0.01em; }
-section { padding: 10px 18px 14px; }
-section + section { border-top: 1px solid var(--track); }
-h2 {
-  margin: 0 0 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--muted);
-}
-.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 10px 0; }
-.row label, .row .name { color: var(--text); }
-.value { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 3ch; text-align: right; }
-button {
-  font: inherit; color: inherit; background: none; border: 0; cursor: pointer; border-radius: 10px;
-}
+
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; border-radius: 10px; text-shadow: inherit; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .icon {
-  width: 32px; height: 32px; display: grid; place-items: center; color: var(--muted);
+  width: 34px; height: 34px; display: grid; place-items: center; color: var(--muted); flex: none;
   transition: background 0.15s, color 0.15s;
 }
-.icon:hover { background: var(--chip-on); color: var(--text); }
-.segmented {
-  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; padding: 3px;
-  background: var(--chip); border-radius: 12px; width: 100%;
+.icon:hover { background: var(--chip-hover); color: var(--text); }
+.icon[aria-pressed="true"] { color: var(--text); }
+
+header { display: flex; align-items: center; gap: 4px; padding: 14px 10px 8px 18px; }
+.title { flex: 1; min-width: 0; }
+h1 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: 0.01em; }
+.status { margin-top: 2px; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--live); box-shadow: 0 0 0 3px color-mix(in srgb, var(--live) 25%, transparent); }
+.paused .pulse { background: var(--faint); box-shadow: none; }
+
+.modes {
+  margin: 4px 14px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px;
+  background: var(--chip); border-radius: 13px;
 }
-.segmented button { padding: 6px 8px; border-radius: 9px; color: var(--muted); transition: background 0.15s, color 0.15s; }
-.segmented button[aria-pressed="true"] { background: var(--chip-on); color: var(--text); font-weight: 600; }
-input[type="range"] { width: 100%; accent-color: var(--accent); margin: 2px 0 0; }
-.slider { margin: 12px 0; }
-.slider .top { display: flex; justify-content: space-between; margin-bottom: 4px; }
-.species { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-.species label {
-  display: flex; align-items: center; gap: 10px; padding: 6px 8px; margin: 0 -8px;
-  border-radius: 10px; cursor: pointer; transition: background 0.15s;
+.modes button {
+  padding: 8px 6px; border-radius: 10px; color: var(--muted); font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 7px; transition: background 0.15s, color 0.15s;
 }
-.species label:hover { background: var(--chip); }
-.dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 1px var(--edge); flex: none; }
-.species .name { flex: 1; }
-.species input { position: absolute; opacity: 0; pointer-events: none; }
-.switch {
-  width: 30px; height: 18px; border-radius: 9px; background: var(--track); position: relative; flex: none;
-  transition: background 0.15s;
-}
-.switch::after {
-  content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
-  background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); transition: transform 0.15s;
-}
-.species input:checked + .switch { background: var(--accent); }
-.species input:checked + .switch::after { transform: translateX(12px); }
-.species input:focus-visible + .switch { outline: 2px solid var(--accent); outline-offset: 2px; }
-.links { display: flex; gap: 6px; }
+.modes button:hover { color: var(--text); }
+.modes button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); text-shadow: none; }
+
+.page { padding: 4px 18px 14px; }
+.page[hidden] { display: none; }
+.shared { padding: 4px 18px 14px; border-top: 1px solid var(--track); }
+.section { margin: 12px 0 0; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.two .segmented button { padding: 7px 4px; gap: 5px; }
+.block { margin-top: 12px; }
+.label { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.label span:first-child { font-weight: 600; }
+.hint { color: var(--muted); font-size: 12px; }
+.links { display: flex; gap: 2px; }
 .links button { font-size: 12px; color: var(--accent); padding: 2px 6px; }
-.links button:hover { background: var(--chip); }
-.wide { width: 100%; padding: 8px; background: var(--chip); border-radius: 12px; font-weight: 600; }
-.wide:hover { background: var(--chip-on); }
-.fab { width: 46px; height: 46px; border-radius: 16px; display: grid; place-items: center; color: var(--text); }
-.hidden { display: none; }
-.select { position: relative; }
-.select select {
-  appearance: none; -webkit-appearance: none; width: 100%; font: inherit; color: inherit;
-  background: var(--chip); border: 1px solid var(--edge); border-radius: 12px; padding: 8px 32px 8px 12px; cursor: pointer;
+.links button:hover { background: var(--chip-hover); }
+
+.stepper { display: flex; align-items: center; justify-content: space-between; background: var(--chip); border-radius: 12px; padding: 3px; }
+.stepper .icon { width: 36px; height: 30px; border-radius: 9px; }
+.stepper .icon:disabled { opacity: 0.3; cursor: default; background: none; }
+.stepper output { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+.group { margin: 10px 0 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.chip {
+  min-width: 0; display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 11px; text-align: left;
+  background: var(--chip); border: 1px solid transparent; color: var(--faint);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
-.select select:hover { background: var(--chip-on); }
-.select svg { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--muted); }
-.note { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+.chip:hover { background: var(--chip-hover); }
+.chip[aria-pressed="true"] { color: var(--text); background: var(--chip-on); border-color: var(--edge); }
+.chip .dot { opacity: 0.35; }
+.chip[aria-pressed="true"] .dot { opacity: 1; }
+.chip .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 1px var(--edge); flex: none; }
+.here { width: 6px; height: 6px; border-radius: 50%; background: var(--live); flex: none; visibility: hidden; }
+.here.on { visibility: visible; }
+
+.segmented { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; padding: 3px; background: var(--chip); border-radius: 12px; }
+.segmented svg { width: 15px; height: 15px; }
+.segmented button { padding: 7px 8px; border-radius: 9px; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s, color 0.15s; }
+.segmented button:hover { color: var(--text); }
+.segmented button[aria-pressed="true"] { background: var(--chip-on); color: var(--text); font-weight: 600; }
+
+input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
+.ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); margin-top: 2px; }
+
+.watching { margin-top: 12px; padding: 12px; border-radius: 14px; background: var(--chip-on); border: 1px solid var(--edge); }
+.watching .row { display: flex; align-items: center; gap: 6px; }
+.watching .who { flex: 1; text-align: center; min-width: 0; }
+.watching .who b { display: block; font-size: 14px; }
+.watching .who span { color: var(--muted); font-size: 12px; }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.card {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 8px; padding: 7px 10px; border-radius: 11px; min-width: 0;
+  background: var(--chip); border: 1px solid transparent; text-align: left; transition: background 0.15s, border-color 0.15s;
+}
+.card:hover { background: var(--chip-hover); }
+.card[aria-pressed="true"] { border-color: var(--accent); background: var(--chip-on); }
+.card .name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 550; }
+.card .size { grid-column: 2; color: var(--muted); font-size: 11.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+footer { padding: 10px 18px 14px; border-top: 1px solid var(--track); color: var(--faint); font-size: 11.5px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+kbd { font: 600 10.5px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 1px 5px; border-radius: 5px; background: var(--chip-on); color: var(--muted); }
+
+.fab { width: 46px; height: 46px; border-radius: 16px; display: grid; place-items: center; color: var(--text); }
+@media (hover: none) { footer { display: none; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 `;
-var SLIDERS = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>';
-var CLOSE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
-function mountPanel(host, settings, change) {
+function mountPanel(host, settings, change, inView) {
   const root = document.createElement("div");
   host.appendChild(root);
   const shadow = root.attachShadow({ mode: "open" });
-  const segmented = (name, label, options) => `<div class="segmented" role="group" aria-label="${label}">${options.map(([v, t]) => `<button type="button" data-${name}="${v}">${t}</button>`).join("")}</div>`;
-  const slider = (name, label, min, max, step) => `<div class="slider" data-row="${name}"><div class="top"><label for="${name}">${label}</label><span class="value" data-value="${name}"></span></div><input id="${name}" type="range" min="${min}" max="${max}" step="${step}"></div>`;
+  const dot = (n) => `<span class="dot" style="background:${LABELS[n][2]}"></span>`;
+  const seg = (name, label, options) => `<div class="segmented" role="group" aria-label="${label}">${options.map(([v, t]) => `<button type="button" data-${name}="${v}">${t}</button>`).join("")}</div>`;
   shadow.innerHTML = `<style>${CSS}</style>
   <div class="wrap">
     <div class="panel glass" id="panel" role="region" aria-label="Controles do Shark Night">
-      <header><h1>Shark Night</h1><button type="button" class="icon" data-collapse aria-label="Recolher controles" aria-controls="panel">${CLOSE}</button></header>
-      <section>
-        <h2>Observar</h2>
-        <div class="select"><select id="observe" aria-label="Observar um animal sozinho">
-          <option value="">Mar aberto</option>
-          ${KINDS.map((k) => `<option value="${k.name}">${LABELS[k.name][0]}</option>`).join("")}
-        </select><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
-        <p class="note" data-note></p>
-      </section>
-      <section>
-        <h2>Animais</h2>
-        ${slider("atOnce", "Animais por vez", 1, 8, 1)}
-        <div class="row"><span class="name">Esp\xE9cies</span><span class="links"><button type="button" data-all>Todas</button><button type="button" data-none>Nenhuma</button></span></div>
-        <ul class="species">${KINDS.map((k) => `<li><label><span class="dot" style="background:${LABELS[k.name][1]}"></span><span class="name">${LABELS[k.name][0]}</span><input type="checkbox" data-kind="${k.name}"><span class="switch" aria-hidden="true"></span></label></li>`).join("")}</ul>
-      </section>
-      <section>
-        <h2>Visual</h2>
-        <div class="row">${segmented("theme", "Tema", [["dark", "Escuro"], ["light", "Claro"]])}</div>
-        <div class="row">${segmented("style", "Estilo", [["mosaic", "Mosaico"], ["smooth", "Liso"]])}</div>
-        ${slider("zoomOut", "Zoom (afastar)", 0.6, 3, 0.1)}
-        ${slider("cell", "Ladrilho do mosaico", 6, 20, 1)}
-      </section>
-      <section>
-        <h2>Tempo</h2>
-        <div class="row">${segmented("speed", "Velocidade", [["0.5", "0,5\xD7"], ["1", "1\xD7"], ["2", "2\xD7"]])}</div>
-        <button type="button" class="wide" data-pause></button>
-      </section>
+      <header>
+        <div class="title"><h1>Shark Night</h1><div class="status" aria-live="polite"><span class="pulse"></span><span data-status></span></div></div>
+        <button type="button" class="icon" data-pause></button>
+        <button type="button" class="icon" data-collapse aria-label="Esconder controles (H)" title="Esconder (H)" aria-controls="panel">${ICONS.hide}</button>
+      </header>
+      <div class="modes" role="group" aria-label="Modo">
+        <button type="button" data-mode="sea">Mar aberto</button>
+        <button type="button" data-mode="watch">${ICONS.eye}Observar</button>
+      </div>
+
+      <div class="page" id="page-sea">
+        <div class="block">
+          <div class="label"><span>Animais por vez</span><span class="hint">o cardume conta como 1</span></div>
+          <div class="stepper"><button type="button" class="icon" data-less aria-label="Menos animais">${ICONS.minus}</button><output data-count aria-live="polite"></output><button type="button" class="icon" data-more aria-label="Mais animais">${ICONS.plus}</button></div>
+        </div>
+        <div class="block">
+          <div class="label"><span>Esp\xE9cies que aparecem</span><span class="links"><button type="button" data-all>Todas</button><button type="button" data-none>Nenhuma</button></span></div>
+          ${GROUPS.map(([group, names]) => `<div class="group">${group}</div><div class="chips">${names.map((n) => `<button type="button" class="chip" data-kind="${n}" title="${LABELS[n][1]}">${dot(n)}<span class="name">${LABELS[n][0]}</span><span class="here" data-here="${n}" title="Na tela agora"></span></button>`).join("")}</div>`).join("")}
+        </div>
+      </div>
+
+      <div class="page" id="page-watch">
+        <div class="watching">
+          <div class="row">
+            <button type="button" class="icon" data-step="-1" aria-label="Animal anterior (\u2190)" title="Anterior (\u2190)">${ICONS.prev}</button>
+            <div class="who"><b data-who></b><span data-who-size></span></div>
+            <button type="button" class="icon" data-step="1" aria-label="Pr\xF3ximo animal (\u2192)" title="Pr\xF3ximo (\u2192)">${ICONS.next}</button>
+          </div>
+        </div>
+        <div class="cards block">${ORDER.map((n) => `<button type="button" class="card" data-watch="${n}" title="${LABELS[n][1]}">${dot(n)}<span class="name">${LABELS[n][0]}</span><span class="size">${sizeOf(n)}</span></button>`).join("")}</div>
+      </div>
+
+      <div class="shared">
+        <div class="section">Visualiza\xE7\xE3o</div>
+        <div class="block two">${seg("theme", "Tema", [["dark", `${ICONS.moon}Escuro`], ["light", `${ICONS.sun}Claro`]])}${seg("style", "Estilo", [["mosaic", "Mosaico"], ["smooth", "Liso"]])}</div>
+        <div class="block">
+          <div class="label"><label for="zoomOut">Dist\xE2ncia</label><span class="hint" data-value="zoomOut"></span></div>
+          <input id="zoomOut" type="range" min="0.6" max="3" step="0.1">
+          <div class="ends"><span>Perto</span><span>Longe</span></div>
+        </div>
+        <div class="block" data-row="cell">
+          <div class="label"><label for="cell">Ladrilho do mosaico</label><span class="hint" data-value="cell"></span></div>
+          <input id="cell" type="range" min="6" max="20" step="1">
+          <div class="ends"><span>Fino</span><span>Grosso</span></div>
+        </div>
+        <div class="block"><div class="label"><span>Velocidade</span></div>${seg("speed", "Velocidade", [["0.5", "0,5\xD7"], ["1", "1\xD7"], ["2", "2\xD7"]])}</div>
+      </div>
+
+      <footer><span><kbd>Espa\xE7o</kbd> pausa</span><span><kbd>H</kbd> esconde</span><span><kbd>\u2190</kbd><kbd>\u2192</kbd> troca o animal</span><span><kbd>Esc</kbd> volta ao mar</span></footer>
     </div>
-    <button type="button" class="fab glass" data-open aria-label="Mostrar controles" aria-controls="panel">${SLIDERS}</button>
+    <button type="button" class="fab glass" data-open aria-label="Mostrar controles (H)" title="Mostrar controles (H)" aria-controls="panel">${ICONS.sliders}</button>
   </div>`;
   const $ = (sel) => shadow.querySelector(sel);
   const $$ = (sel) => [...shadow.querySelectorAll(sel)];
   const wrap = $(".wrap");
+  let last = settings.observe ?? "white";
   const set = (patch) => {
     Object.assign(settings, patch);
     change(patch);
     refresh();
   };
+  const watch = (name) => {
+    if (name !== null) last = name;
+    set({ observe: name });
+  };
+  const step = (by) => {
+    const i = settings.observe === null ? by > 0 ? -1 : 0 : ORDER.indexOf(settings.observe);
+    watch(ORDER[(i + by + ORDER.length) % ORDER.length]);
+  };
+  const toggle = (open) => {
+    wrap.classList.toggle("closed", !open);
+    $(open ? "[data-collapse]" : "[data-open]").focus();
+  };
+  function status() {
+    const here = inView();
+    const text = settings.observe !== null ? `Observando: ${LABELS[settings.observe][1]}` : settings.paused ? "Pausado" : here.length === 0 ? "Esperando o pr\xF3ximo animal" : `${here.length} ${here.length === 1 ? "animal" : "animais"} na tela`;
+    $("[data-status]").textContent = text;
+    wrap.classList.toggle("paused", settings.paused);
+    for (const el of $$("[data-here]")) el.classList.toggle("on", settings.observe === null && here.includes(el.dataset.here));
+  }
   function refresh() {
     wrap.classList.toggle("light", settings.theme === "light");
+    const pause = $("[data-pause]");
+    pause.innerHTML = settings.paused ? ICONS.play : ICONS.pause;
+    pause.setAttribute("aria-label", settings.paused ? "Continuar (espa\xE7o)" : "Pausar (espa\xE7o)");
+    pause.title = settings.paused ? "Continuar (espa\xE7o)" : "Pausar (espa\xE7o)";
+    const watching = settings.observe !== null;
+    for (const b of $$("[data-mode]")) b.setAttribute("aria-pressed", String(b.dataset.mode === "watch" === watching));
+    $("#page-sea").hidden = watching;
+    $("#page-watch").hidden = !watching;
+    const count = $("[data-count]");
+    count.textContent = String(settings.atOnce);
+    $("[data-less]").disabled = settings.atOnce <= 1;
+    $("[data-more]").disabled = settings.atOnce >= 8;
+    for (const b of $$("[data-kind]")) b.setAttribute("aria-pressed", String(settings.species.includes(b.dataset.kind)));
+    for (const b of $$("[data-speed]")) b.setAttribute("aria-pressed", String(Number(b.dataset.speed) === settings.speed));
     for (const b of $$("[data-theme]")) b.setAttribute("aria-pressed", String(b.dataset.theme === settings.theme));
     for (const b of $$("[data-style]")) b.setAttribute("aria-pressed", String(b.dataset.style === settings.style));
-    for (const b of $$("[data-speed]")) b.setAttribute("aria-pressed", String(Number(b.dataset.speed) === settings.speed));
-    for (const c of $$("[data-kind]")) c.checked = settings.species.includes(c.dataset.kind);
-    const show = { atOnce: String(settings.atOnce), zoomOut: `${settings.zoomOut.toFixed(1).replace(".", ",")}\xD7`, cell: String(settings.cell) };
-    for (const name of ["atOnce", "zoomOut", "cell"]) {
-      $(`#${name}`).value = String(settings[name]);
-      $(`[data-value="${name}"]`).textContent = show[name];
+    for (const b of $$("[data-watch]")) b.setAttribute("aria-pressed", String(b.dataset.watch === settings.observe));
+    if (settings.observe !== null) {
+      $("[data-who]").textContent = LABELS[settings.observe][1];
+      $("[data-who-size]").textContent = sizeOf(settings.observe);
     }
-    $('[data-row="cell"]').classList.toggle("hidden", settings.style !== "mosaic");
-    $("[data-pause]").textContent = settings.paused ? "Continuar" : "Pausar";
-    $("#observe").value = settings.observe ?? "";
-    const watched = KINDS.find((k) => k.name === settings.observe);
-    $("[data-note]").textContent = watched === void 0 ? "Escolha um animal para v\xEA-lo sozinho, no meio da tela." : `${watched.plan === "school" ? "Cada peixe mede" : "Comprimento:"} ${(watched.length / 80).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} m. A c\xE2mera acompanha o animal.`;
+    $("#zoomOut").value = String(settings.zoomOut);
+    $('[data-value="zoomOut"]').textContent = `${settings.zoomOut.toFixed(1).replace(".", ",")}\xD7`;
+    $("#cell").value = String(settings.cell);
+    $('[data-value="cell"]').textContent = String(settings.cell);
+    $('[data-row="cell"]').hidden = settings.style !== "mosaic";
+    status();
   }
   shadow.addEventListener("click", (e) => {
     const b = e.target.closest("button");
     if (b === null) return;
-    if (b.dataset.theme !== void 0) set({ theme: b.dataset.theme });
-    else if (b.dataset.style !== void 0) set({ style: b.dataset.style });
-    else if (b.dataset.speed !== void 0) set({ speed: Number(b.dataset.speed) });
+    const d = b.dataset;
+    if (d.mode !== void 0) watch(d.mode === "watch" ? settings.observe ?? last : null);
+    else if (d.kind !== void 0) {
+      const kind = d.kind;
+      set({ species: settings.species.includes(kind) ? settings.species.filter((n) => n !== kind) : [...settings.species, kind] });
+    } else if (d.watch !== void 0) watch(d.watch);
+    else if (d.step !== void 0) step(Number(d.step));
+    else if (d.speed !== void 0) set({ speed: Number(d.speed) });
+    else if (d.theme !== void 0) set({ theme: d.theme });
+    else if (d.style !== void 0) set({ style: d.style });
     else if (b.hasAttribute("data-pause")) set({ paused: !settings.paused });
+    else if (b.hasAttribute("data-less")) set({ atOnce: Math.max(1, settings.atOnce - 1) });
+    else if (b.hasAttribute("data-more")) set({ atOnce: Math.min(8, settings.atOnce + 1) });
     else if (b.hasAttribute("data-all")) set({ species: KINDS.map((k) => k.name) });
     else if (b.hasAttribute("data-none")) set({ species: [] });
-    else if (b.hasAttribute("data-collapse")) {
-      wrap.classList.add("closed");
-      $("[data-open]").focus();
-    } else if (b.hasAttribute("data-open")) {
-      wrap.classList.remove("closed");
-      $("[data-collapse]").focus();
-    }
-  });
-  shadow.addEventListener("change", (e) => {
-    const input = e.target;
-    if (input.id === "observe") set({ observe: input.value === "" ? null : input.value });
-    if (input.dataset.kind !== void 0) {
-      const kind = input.dataset.kind;
-      set({ species: input.checked ? [...settings.species, kind] : settings.species.filter((n) => n !== kind) });
-    }
+    else if (b.hasAttribute("data-collapse")) toggle(false);
+    else if (b.hasAttribute("data-open")) toggle(true);
   });
   shadow.addEventListener("input", (e) => {
     const input = e.target;
-    if (input.id === "atOnce" || input.id === "cell") set({ [input.id]: Number(input.value) });
+    if (input.id === "cell") set({ cell: Number(input.value) });
     if (input.id === "zoomOut") $('[data-value="zoomOut"]').textContent = `${Number(input.value).toFixed(1).replace(".", ",")}\xD7`;
   });
   shadow.addEventListener("change", (e) => {
     const input = e.target;
     if (input.id === "zoomOut") set({ zoomOut: Number(input.value) });
   });
+  const keys = (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const t = e.composedPath()[0];
+    const tag = t?.tagName ?? "";
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t?.isContentEditable === true) return;
+    const onButton = tag === "BUTTON";
+    if (e.key === " " && !onButton) set({ paused: !settings.paused });
+    else if (e.key === "h" || e.key === "H") toggle(wrap.classList.contains("closed"));
+    else if (e.key === "Escape" && settings.observe !== null) watch(null);
+    else if ((e.key === "ArrowRight" || e.key === "ArrowLeft") && settings.observe !== null) step(e.key === "ArrowRight" ? 1 : -1);
+    else return;
+    e.preventDefault();
+  };
+  window.addEventListener("keydown", keys);
+  const ticker = window.setInterval(status, 700);
   if (host.clientWidth < 640) wrap.classList.add("closed");
   refresh();
   return {
-    remove: () => root.remove(),
+    remove: () => {
+      window.removeEventListener("keydown", keys);
+      clearInterval(ticker);
+      root.remove();
+    },
     covered: () => wrap.classList.contains("closed") ? 0 : host.getBoundingClientRect().right - $(".panel").getBoundingClientRect().left
   };
 }
@@ -2154,6 +2280,7 @@ var SAVED = "shark-night:settings";
 var GLYPHS = "$%tSX8@:;#S%X8tS";
 var SHADES = [1, 0.886, 0.776, 0.659];
 var GLYPH_INK = 0.227;
+var GLYPH_LIFT = 0.72;
 var STEP3 = 1 / 60;
 var MARGIN = 20;
 function rng(seed) {
@@ -2221,6 +2348,7 @@ function mountSharkNight(host, options = {}) {
   let cols = 0;
   let rows = 0;
   let watch;
+  let stale = false;
   let panel;
   function rules() {
     sea.atOnce = settings.atOnce;
@@ -2245,18 +2373,25 @@ function mountSharkNight(host, options = {}) {
   function observe(name) {
     if (name === null) {
       watch = void 0;
+      if (stale) {
+        stale = false;
+        layout();
+        return;
+      }
       setWidth(normalWidth());
     } else {
       const kind = KINDS.findIndex((k2) => k2.name === name);
       const k = KINDS[kind];
-      const view2 = k.plan === "school" ? 1500 : Math.max(320, k.length * 2.2);
-      const world = Math.max(view2 * 4, 4e3);
+      const world = Math.max(framing(k, 3) * 4, 4e3);
       setWidth(world);
       const own = createSea(Math.round(world * canvas.height / canvas.width));
       const focus = focusOf(place(own, kind));
-      watch = { sea: own, view: view2, x: focus.x, y: focus.y };
+      watch = { sea: own, kind: k, view: framing(k, settings.zoomOut), x: focus.x, y: focus.y };
     }
     water();
+  }
+  function framing(k, zoomOut) {
+    return (k.plan === "school" ? 1500 : Math.max(320, k.length * 2.2)) * (zoomOut / 1.5);
   }
   function view() {
     if (watch === void 0) return { animals: sea.animals, left: 0, top: 0, s: scale };
@@ -2340,6 +2475,7 @@ function mountSharkNight(host, options = {}) {
     for (const a of v.animals) DRAW[KINDS[a.kind].plan](lctx, a, tu);
     const px = lctx.getImageData(0, 0, cols, rows).data;
     const size = cell * scale;
+    const light = settings.theme === "light";
     const inset = Math.max(0.5, size * 0.06);
     ctx.font = `700 ${Math.max(4, Math.round(size * 0.72))}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textAlign = "center";
@@ -2357,7 +2493,7 @@ function mountSharkNight(host, options = {}) {
         ctx.fillRect(x + inset, y + inset, size - 2 * inset, size - 2 * inset);
         const g = tiles.glyph[tile];
         if (g !== "" && size >= 6) {
-          ctx.fillStyle = `rgb(${cr * GLYPH_INK},${cg * GLYPH_INK},${cb * GLYPH_INK})`;
+          ctx.fillStyle = light ? `rgb(${cr + (255 - cr) * GLYPH_LIFT},${cg + (255 - cg) * GLYPH_LIFT},${cb + (255 - cb) * GLYPH_LIFT})` : `rgb(${cr * GLYPH_INK},${cg * GLYPH_INK},${cb * GLYPH_INK})`;
           ctx.fillText(g, x + size / 2, y + size / 2 + size * 0.04);
         }
       }
@@ -2412,9 +2548,13 @@ function mountSharkNight(host, options = {}) {
   observer.observe(host);
   function apply(patch) {
     if (patch.zoomOut !== void 0) {
-      setWidth(1600 * Math.max(0.5, settings.zoomOut));
-      layout();
-      settle();
+      if (watch !== void 0) {
+        watch.view = framing(watch.kind, settings.zoomOut);
+        stale = true;
+      } else {
+        layout();
+        settle();
+      }
     }
     if (patch.observe !== void 0) observe(patch.observe);
     if (patch.theme !== void 0 || patch.style !== void 0 || patch.cell !== void 0) water();
@@ -2431,7 +2571,7 @@ function mountSharkNight(host, options = {}) {
     } catch {
     }
   }
-  panel = options.controls === true ? mountPanel(host, settings, apply) : void 0;
+  panel = options.controls === true ? mountPanel(host, settings, apply, () => [...new Set(sea.animals.map((a) => KINDS[a.kind].name))]) : void 0;
   return () => {
     cancelAnimationFrame(frame);
     observer.disconnect();

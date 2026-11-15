@@ -21,14 +21,16 @@ Um mar escuro visto de cima, ao vivo, e os animais que passam por ele no tamanho
 
 ## Controles
 
-Um painel flutuante à direita, de vidro fosco transparente (os animais aparecem passando por trás), para mudar tudo ao vivo:
+Um painel flutuante à direita, de vidro fosco transparente (os animais aparecem passando por trás). No topo, quantos animais estão na tela e o botão de pausa. Logo abaixo, os dois modos:
 
-- **Observar:** escolha um animal para vê-lo sozinho, para avaliar formato e movimento. Ele continua nadando, virando e acelerando como sempre, mas a câmera o acompanha e o mantém no meio da área livre, enquadrado pelo tamanho dele. Partículas na água passam por ele e mostram o deslocamento. O painel mostra o tamanho real do animal. "Mar aberto" volta para o mar de onde ele parou.
-- **Animais:** quantos podem aparecer de uma vez (1 a 8) e quais espécies podem entrar (com "Todas" e "Nenhuma"). Desligar uma espécie, ou diminuir o número, faz os que sobram irem embora nadando, sem sumir de repente.
-- **Visual:** tema escuro ou claro, mosaico ou liso, zoom (que recomeça a cena) e o tamanho do ladrilho do mosaico.
-- **Tempo:** velocidade 0,5×, 1× ou 2×, e pausar.
+- **Mar aberto:** os animais entram e saem. Escolha quantos podem aparecer de uma vez (− 1 a 8 +) e quais espécies podem entrar, em botões agrupados (Tubarões, Mamíferos, Outros), com um ponto verde em quem está na tela agora. Desligar uma espécie, ou diminuir o número, faz os que sobram irem embora nadando, sem sumir de repente.
+- **Observar:** um animal sozinho, para avaliar formato e movimento. Ele continua nadando, virando e acelerando como sempre, mas a câmera o acompanha e o mantém no meio da área livre. Partículas na água passam por ele e mostram o deslocamento. Os cartões mostram o tamanho real de cada um, e as setas ‹ › passam para o próximo animal.
 
-O painel recolhe num botão. Em tela estreita, ele já começa recolhido. As escolhas ficam salvas no navegador.
+Valem para os dois modos: tema escuro ou claro, mosaico ou liso, distância (perto ou longe), tamanho do ladrilho do mosaico e velocidade (0,5×, 1×, 2×).
+
+Atalhos: `Espaço` pausa, `H` esconde o painel, `←` `→` trocam o animal observado, `Esc` volta ao mar aberto.
+
+O painel recolhe num botão. Em tela estreita, ele já começa recolhido. As escolhas ficam salvas no navegador (menos o animal observado).
 
 ## Usar
 
