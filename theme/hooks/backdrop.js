@@ -2461,7 +2461,7 @@ function createMosaic(width, height, tile) {
 globalThis.Path2D ?? (globalThis.Path2D = SvgPath);
 var STEP3 = 1 / 60;
 var MARGIN = 20;
-var RATE = 20;
+var RATE = 10;
 var SPARE = 0.3;
 var LEAD2 = 0.1;
 var FADE = 0.8;

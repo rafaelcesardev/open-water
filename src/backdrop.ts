@@ -1,5 +1,5 @@
 // The sea as a backdrop for a surface that takes an SVG and runs no script (the Claude app's): the same simulation and
-// drawings as the page, sent a few seconds at a time. Each send is the next stretch of the sea, sampled up to twenty
+// drawings as the page, sent a few seconds at a time. Each send is the next stretch of the sea, sampled up to ten
 // times a second: in the mosaic, the tiles that change at each sample (mosaic.ts); in the smooth style, the shapes
 // moved between samples by SMIL (svg.ts). Still live: each stretch is simulated just before it is sent, with real
 // randomness.
@@ -35,8 +35,9 @@ export type BackdropOptions = {
 
 const STEP = 1 / 60
 const MARGIN = 20
-/** Samples a second at most; fewer when a stretch would not fit the limit. */
-const RATE = 20
+/** Samples a second at most; fewer when a stretch would not fit the limit. Ten, not twenty: half the changes for the
+ * app to paint each second, still smooth at the animals' pace. */
+const RATE = 10
 /** Seconds of sea past its stretch each send carries, and seconds into its stretch each send starts (see stream). */
 const SPARE = 0.3
 const LEAD = 0.1

@@ -42,12 +42,13 @@ const { problems } = makeColors({
 const SCENE = 'open-water'
 // A stretch of sea a send: shorter gives the tiles more room a second, so the mosaic moves at more samples a second.
 const SECONDS = 1
-/** Up to five animals at once, and not the blue whale or the school: they light the most tiles, so the app has the
+/** Up to four animals at once, and not the blue whale or the school: they light the most tiles, so the app has the
  * least to redraw. */
-const AT_ONCE = 5
+const AT_ONCE = 4
 const SPECIES = ['white', 'hammer', 'tiger', 'blacktip', 'orca', 'dolphin', 'turtle', 'manta', 'squid']
-// Only the sea is ours: the app's own colours stay as they are, in both modes.
-const LOOK: ThemeSetArgs = { backdrop: { scene: SCENE, glass: { blur: 8, opacity: 0.6 } } }
+// Only the sea is ours: the app's own colours stay as they are, in both modes. No blur on the panels: under a sea
+// that moves, the app would blur it again at every change.
+const LOOK: ThemeSetArgs = { backdrop: { scene: SCENE, glass: { blur: 0, opacity: 0.6 } } }
 
 export const register: Register = on => {
   const sea = createBackdrop({ seconds: SECONDS, atOnce: AT_ONCE, species: SPECIES })
