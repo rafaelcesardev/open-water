@@ -1,4 +1,4 @@
-// Shark Night, live: a dark sea seen from above, on a canvas, and the animals passing through it at their real sizes:
+// Open Water, live: a dark sea seen from above, on a canvas, and the animals passing through it at their real sizes:
 // sharks, a blue whale, orcas, dolphins, a sea turtle, a manta, a giant squid, a school of bigeye trevally.
 //
 // The sea is simulated as it runs (sim.ts): each animal decides as it goes, with real randomness, so no two minutes
@@ -58,7 +58,7 @@ const NETS: [number, number, number][] = [
   [1, 9, 4],
   [1.37, -6, 7],
 ]
-const SAVED = 'shark-night:settings'
+const SAVED = 'open-water:settings'
 
 const GLYPHS = '$%tSX8@:;#S%X8tS'
 const SHADES = [1, 0.886, 0.776, 0.659]
@@ -127,8 +127,8 @@ function causticNet(): ImageData {
   return img
 }
 
-/** Starts Shark Night in `host` (any element; the canvas fills it). Returns a function that stops it. */
-export function mountSharkNight(host: HTMLElement, options: Options = {}): () => void {
+/** Starts Open Water in `host` (any element; the canvas fills it). Returns a function that stops it. */
+export function mountOpenWater(host: HTMLElement, options: Options = {}): () => void {
   const settings: Settings = {
     theme: options.theme ?? 'dark',
     style: options.style ?? 'mosaic',

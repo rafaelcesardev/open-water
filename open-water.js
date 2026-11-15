@@ -2125,9 +2125,9 @@ function mountPanel(host, settings, change, inView) {
   const seg = (name, label, options) => `<div class="segmented" role="group" aria-label="${label}">${options.map(([v, t]) => `<button type="button" data-${name}="${v}">${t}</button>`).join("")}</div>`;
   shadow.innerHTML = `<style>${CSS}</style>
   <div class="wrap">
-    <div class="panel glass" id="panel" role="region" aria-label="Controles do Shark Night">
+    <div class="panel glass" id="panel" role="region" aria-label="Controles do Open Water">
       <header>
-        <div class="title"><h1>Shark Night</h1><div class="status" aria-live="polite"><span class="pulse"></span><span data-status></span></div></div>
+        <div class="title"><h1>Open Water</h1><div class="status" aria-live="polite"><span class="pulse"></span><span data-status></span></div></div>
         <button type="button" class="icon" data-theme-toggle></button>
         <button type="button" class="icon" data-pause></button>
         <button type="button" class="icon" data-collapse aria-label="Esconder controles (H)" title="Esconder (H)" aria-controls="panel">${ICONS.hide}</button>
@@ -2313,7 +2313,7 @@ var NETS = [
   [1, 9, 4],
   [1.37, -6, 7]
 ];
-var SAVED = "shark-night:settings";
+var SAVED = "open-water:settings";
 var GLYPHS = "$%tSX8@:;#S%X8tS";
 var SHADES = [1, 0.886, 0.776, 0.659];
 var GLYPH_INK = 0.227;
@@ -2368,7 +2368,7 @@ function causticNet() {
   }
   return img;
 }
-function mountSharkNight(host, options = {}) {
+function mountOpenWater(host, options = {}) {
   const settings = {
     theme: options.theme ?? "dark",
     style: options.style ?? "mosaic",
@@ -2760,5 +2760,5 @@ function mountSharkNight(host, options = {}) {
   };
 }
 export {
-  mountSharkNight
+  mountOpenWater
 };

@@ -1,4 +1,4 @@
-# Shark Night
+# Open Water
 
 Um mar escuro visto de cima, ao vivo, e os animais que passam por ele no tamanho real de cada um: tubarões (branco, martelo, tigre e galha-preta), baleia-azul, orca, golfinho, tartaruga-verde, manta, lula-gigante e um cardume de xaréus-olho-grande. Desenhados como um mosaico de ladrilhos com letras, ou com o contorno liso.
 
@@ -41,13 +41,13 @@ Abra `index.html` por um servidor (módulos não carregam direto do arquivo):
 npx serve .
 ```
 
-Num site, basta o `shark-night.js` e um elemento para ocupar:
+Num site, basta o `open-water.js` e um elemento para ocupar:
 
 ```html
 <div id="sea" style="position:fixed;inset:0"></div>
 <script type="module">
-  import { mountSharkNight } from './shark-night.js'
-  const stop = mountSharkNight(document.getElementById('sea'), { style: 'mosaic', zoomOut: 1.5, cell: 10, controls: true })
+  import { mountOpenWater } from './open-water.js'
+  const stop = mountOpenWater(document.getElementById('sea'), { style: 'mosaic', zoomOut: 1.5, cell: 10, controls: true })
   // stop() para remover
 </script>
 ```
@@ -72,12 +72,12 @@ Com "reduzir movimento" ligado no sistema, mostra uma cena parada.
 - `src/sim.ts`: a simulação: espécies com tamanho e ritmo reais, entrada e saída, perseguição, fuga, desvio.
 - `src/school.ts`: o cardume, peixe a peixe.
 - `src/draw/`: o desenho de cada tipo de corpo (`shark`, `cetacean`, `turtle`, `ray`, `squid`, `school`).
-- `src/index.ts`: o canvas (contorno e mosaico) e `mountSharkNight`.
+- `src/index.ts`: o canvas (contorno e mosaico) e `mountOpenWater`.
 - `src/panel.ts`: o painel de controles.
-- `shark-night.js`: tudo junto, pronto para o navegador.
+- `open-water.js`: tudo junto, pronto para o navegador.
 
-Para gerar o `shark-night.js` de novo depois de mudar o código:
+Para gerar o `open-water.js` de novo depois de mudar o código:
 
 ```bash
-npx esbuild src/index.ts --bundle --format=esm --target=es2020 --outfile=shark-night.js
+npx esbuild src/index.ts --bundle --format=esm --target=es2020 --outfile=open-water.js
 ```

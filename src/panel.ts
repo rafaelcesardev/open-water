@@ -1,6 +1,6 @@
 // The control panel: floating on the right, frosted glass thin enough to see the animals pass behind, collapsible.
 // It lives in its own shadow root so neither its styles nor the page's leak across. It only reads the settings and
-// reports changes; mountSharkNight applies them.
+// reports changes; mountOpenWater applies them.
 //
 // Two modes, chosen at the top: the open sea, where animals come and go (how many at once, which kinds), and
 // watching one animal alone, always in the middle (which one). Below, what both share: how it looks (light or dark,
@@ -259,9 +259,9 @@ export function mountPanel(
 
   shadow.innerHTML = `<style>${CSS}</style>
   <div class="wrap">
-    <div class="panel glass" id="panel" role="region" aria-label="Controles do Shark Night">
+    <div class="panel glass" id="panel" role="region" aria-label="Controles do Open Water">
       <header>
-        <div class="title"><h1>Shark Night</h1><div class="status" aria-live="polite"><span class="pulse"></span><span data-status></span></div></div>
+        <div class="title"><h1>Open Water</h1><div class="status" aria-live="polite"><span class="pulse"></span><span data-status></span></div></div>
         <button type="button" class="icon" data-theme-toggle></button>
         <button type="button" class="icon" data-pause></button>
         <button type="button" class="icon" data-collapse aria-label="Esconder controles (H)" title="Esconder (H)" aria-controls="panel">${ICONS.hide}</button>
