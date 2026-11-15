@@ -21,7 +21,7 @@ Um mar escuro visto de cima, ao vivo, e os animais que passam por ele no tamanho
 
 ## Controles
 
-Um painel flutuante à esquerda, com efeito de vidro fosco, para mudar tudo ao vivo:
+Um painel flutuante à direita, de vidro fosco transparente (os animais aparecem passando por trás), para mudar tudo ao vivo:
 
 - **Animais:** quantos podem aparecer de uma vez (1 a 8) e quais espécies podem entrar (com "Todas" e "Nenhuma"). Desligar uma espécie, ou diminuir o número, faz os que sobram irem embora nadando, sem sumir de repente.
 - **Visual:** tema escuro ou claro, mosaico ou liso, zoom (que recomeça a cena) e o tamanho do ladrilho do mosaico.

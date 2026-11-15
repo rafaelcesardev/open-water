@@ -1900,7 +1900,7 @@ var CSS = `
 :host { all: initial; }
 * { box-sizing: border-box; }
 .wrap {
-  --glass: rgba(26, 29, 33, 0.46);
+  --glass: rgba(26, 29, 33, 0.2);
   --edge: rgba(255, 255, 255, 0.10);
   --shine: rgba(255, 255, 255, 0.07);
   --text: #e9edef;
@@ -1910,10 +1910,12 @@ var CSS = `
   --chip-on: rgba(255, 255, 255, 0.16);
   --accent: #8fd3e8;
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.38);
+  /* Over thin glass, a soft shadow keeps the text legible whatever swims behind. */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   font: 13px/1.35 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--text);
   position: absolute;
-  left: 16px;
+  right: 16px;
   top: 50%;
   transform: translateY(-50%);
   max-height: calc(100% - 32px);
@@ -1921,7 +1923,7 @@ var CSS = `
   z-index: 10;
 }
 .wrap.light {
-  --glass: rgba(255, 255, 255, 0.52);
+  --glass: rgba(255, 255, 255, 0.26);
   --edge: rgba(255, 255, 255, 0.75);
   --shine: rgba(255, 255, 255, 0.5);
   --text: #1c2226;
@@ -1931,11 +1933,12 @@ var CSS = `
   --chip-on: rgba(20, 30, 40, 0.12);
   --accent: #1f7d99;
   --shadow: 0 18px 50px rgba(30, 50, 70, 0.20);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
 }
 .glass {
   background: var(--glass);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
-  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(6px) saturate(150%);
+  backdrop-filter: blur(6px) saturate(150%);
   border: 1px solid var(--edge);
   box-shadow: var(--shadow), inset 0 1px 0 var(--shine);
 }
@@ -1945,8 +1948,10 @@ var CSS = `
   border-radius: 20px;
   overflow: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
+  /* Still scrolls when the window is short, without a bar. */
+  scrollbar-width: none;
 }
+.panel::-webkit-scrollbar { display: none; }
 .wrap.closed .panel { display: none; }
 .wrap:not(.closed) .fab { display: none; }
 header {
@@ -2011,7 +2016,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 2px 0 0;
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 `;
 var SLIDERS = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>';
-var CLOSE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
+var CLOSE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 function mountPanel(host, settings, change) {
   const root = document.createElement("div");
   host.appendChild(root);
