@@ -12,7 +12,8 @@
 // GIVING WAY: a body holds water along its trail until its tail has passed. Each animal looks a body and a half ahead
 // for water another will hold when it gets there, and eases off to one side early, by no more than a fair swerve,
 // never on a circle tighter than its body allows; headed into another's body, it also eases its pace to pass behind.
-// Nobody stops and nobody turns on the spot. Seldom, two still meet: one fin slides over the other, as at two depths.
+// Nobody stops and nobody turns on the spot. Each swims at one of three levels, and only those at the same level give
+// way: one at another passes over or under.
 
 import { stepSchool } from './school'
 
@@ -57,8 +58,8 @@ export type Kind = {
   stay: readonly [number, number]
   /** What it hunts. */
   prey: Kind['name'][]
-  /** How deep it keeps, 0 at the surface to 1 as deep as can be seen from above: the least and the most. */
-  depth: readonly [number, number]
+  /** The levels it swims at: 1 just under the surface, 2 midwater, 3 so deep it all but fades from sight. */
+  levels: readonly (1 | 2 | 3)[]
 }
 
 const M = 80
@@ -68,31 +69,31 @@ const cetacean = { plan: 'cetacean', widest: 0, snout: 0, fin: 0, trunk: 0.9, sw
 // Real sizes and paces of the animals, seen from above. Lengths are typical adults.
 export const KINDS: Kind[] = [
   // Great white, 4.5 m: heavy and spindle-shaped, a rounded conical snout, long sickle pectorals.
-  { ...shark, name: 'white', length: 4.5 * M, girth: 40, widest: 0.33, snout: 0.62, fin: 83, reach: 125, speed: 62, beat: 2.6, turn: 0.6, sprint: 2.3, prey: ['blacktip', 'dolphin', 'turtle'], depth: [0.2, 0.65] },
+  { ...shark, name: 'white', length: 4.5 * M, girth: 40, widest: 0.33, snout: 0.62, fin: 83, reach: 125, speed: 62, beat: 2.6, turn: 0.6, sprint: 2.3, prey: ['blacktip', 'dolphin', 'turtle'], levels: [1, 2, 3] },
   // Great hammerhead, 4 m: the cephalofoil on a body already thick right behind it, short pectorals.
-  { ...shark, name: 'hammer', length: 4 * M, girth: 24, widest: 0.34, snout: 0.5, fin: 44, reach: 80, speed: 86, beat: 2.0, turn: 0.6, sprint: 2.3, hammer: true, prey: ['blacktip', 'jacks'], depth: [0.3, 0.75] },
+  { ...shark, name: 'hammer', length: 4 * M, girth: 24, widest: 0.34, snout: 0.5, fin: 44, reach: 80, speed: 86, beat: 2.0, turn: 0.6, sprint: 2.3, hammer: true, prey: ['blacktip', 'jacks'], levels: [2, 3] },
   // Tiger, 3.8 m: a broad blunt head, almost square from above, dark bars across the back. The turtles' hunter.
-  { ...shark, name: 'tiger', length: 3.8 * M, girth: 27, widest: 0.3, snout: 0.5, fin: 53, reach: 85, speed: 74, beat: 2.2, turn: 0.6, sprint: 2.3, prey: ['turtle', 'blacktip', 'jacks'], depth: [0.2, 0.7] },
+  { ...shark, name: 'tiger', length: 3.8 * M, girth: 27, widest: 0.3, snout: 0.5, fin: 53, reach: 85, speed: 74, beat: 2.2, turn: 0.6, sprint: 2.3, prey: ['turtle', 'blacktip', 'jacks'], levels: [1, 2, 3] },
   // Blacktip, 1.6 m: slender and quick, a rounded snout, black-tipped fins.
-  { ...shark, name: 'blacktip', length: 1.6 * M, girth: 10, widest: 0.32, snout: 0.6, fin: 23, reach: 36, speed: 100, beat: 0.9, turn: 0.6, sprint: 2.3, whim: 1.3, prey: [], depth: [0.1, 0.5] },
+  { ...shark, name: 'blacktip', length: 1.6 * M, girth: 10, widest: 0.32, snout: 0.6, fin: 23, reach: 36, speed: 100, beat: 0.9, turn: 0.6, sprint: 2.3, whim: 1.3, prey: [], levels: [1, 2] },
   // Blue whale, 24 m: long and slender, a broad flat U-shaped head, a small fin far back, flukes a quarter its
   // length across. It barely turns; it passes through.
-  { ...cetacean, name: 'blue', length: 24 * M, girth: 0.07 * 24 * M, profile: [[0, 0.45], [0.05, 0.78], [0.15, 0.93], [0.35, 1], [0.6, 0.82], [0.8, 0.42], [0.9, 0.18]], reach: 330, speed: 128, beat: 6, turn: 0.8, sprint: 1.4, whim: 0.2, stay: [4, 14], prey: [], depth: [0.05, 0.3] },
+  { ...cetacean, name: 'blue', length: 24 * M, girth: 0.07 * 24 * M, profile: [[0, 0.45], [0.05, 0.78], [0.15, 0.93], [0.35, 1], [0.6, 0.82], [0.8, 0.42], [0.9, 0.18]], reach: 330, speed: 128, beat: 6, turn: 0.8, sprint: 1.4, whim: 0.2, stay: [4, 14], prey: [], levels: [1, 2] },
   // Orca, 7 m: robust, a blunt rounded head, broad paddle flippers.
-  { ...cetacean, name: 'orca', length: 7 * M, girth: 0.09 * 7 * M, profile: [[0, 0.4], [0.06, 0.8], [0.25, 1], [0.5, 0.9], [0.75, 0.45], [0.9, 0.17]], reach: 135, speed: 120, beat: 1.6, turn: 0.45, sprint: 2.5, whim: 1.2, prey: ['white', 'tiger', 'hammer', 'blacktip', 'dolphin', 'manta'], depth: [0.05, 0.4] },
+  { ...cetacean, name: 'orca', length: 7 * M, girth: 0.09 * 7 * M, profile: [[0, 0.4], [0.06, 0.8], [0.25, 1], [0.5, 0.9], [0.75, 0.45], [0.9, 0.17]], reach: 135, speed: 120, beat: 1.6, turn: 0.45, sprint: 2.5, whim: 1.2, prey: ['white', 'tiger', 'hammer', 'blacktip', 'dolphin', 'manta'], levels: [1, 2] },
   // Bottlenose dolphin, 2.7 m: a short beak before the melon, small pointed flippers. Quick and restless.
-  { ...cetacean, name: 'dolphin', length: 2.7 * M, girth: 0.093 * 2.7 * M, profile: [[0, 0.1], [0.05, 0.28], [0.09, 0.6], [0.3, 1], [0.55, 0.85], [0.78, 0.38], [0.9, 0.15]], reach: 50, speed: 140, beat: 0.8, turn: 0.3, sprint: 2.5, whim: 2.5, prey: ['jacks'], depth: [0, 0.35] },
+  { ...cetacean, name: 'dolphin', length: 2.7 * M, girth: 0.093 * 2.7 * M, profile: [[0, 0.1], [0.05, 0.28], [0.09, 0.6], [0.3, 1], [0.55, 0.85], [0.78, 0.38], [0.9, 0.15]], reach: 50, speed: 140, beat: 0.8, turn: 0.3, sprint: 2.5, whim: 2.5, prey: ['jacks'], levels: [1, 2] },
   // Green sea turtle, 1.2 m: an oval shell, a small head, long front flippers it flies with, stroke and glide.
-  { name: 'turtle', plan: 'turtle', length: 1.2 * M, girth: 32, widest: 0, snout: 0, fin: 0, profile: [[0, 0.25], [0.1, 0.32], [0.17, 0.8], [0.42, 1], [0.7, 0.75], [0.88, 0.3], [1, 0.05]], reach: 64, speed: 48, beat: 2.4, turn: 0.5, trunk: 1, sway: 0, surge: 0.35, sprint: 3, whim: 0.8, stay: [30, 80], prey: [], depth: [0, 0.35] },
+  { name: 'turtle', plan: 'turtle', length: 1.2 * M, girth: 32, widest: 0, snout: 0, fin: 0, profile: [[0, 0.25], [0.1, 0.32], [0.17, 0.8], [0.42, 1], [0.7, 0.75], [0.88, 0.3], [1, 0.05]], reach: 64, speed: 48, beat: 2.4, turn: 0.5, trunk: 1, sway: 0, surge: 0.35, sprint: 3, whim: 0.8, stay: [30, 80], prey: [], levels: [1, 2] },
   // Oceanic manta, 5.5 m across: a wide rigid disc, the horn-like cephalic fins in front, a short whip tail. Its
   // wings beat slowly, a wave running back along them.
-  { name: 'manta', plan: 'ray', length: 4.1 * M, girth: 2.75 * M, widest: 0, snout: 0, fin: 0, profile: [[0, 0.4], [0.06, 0.45], [0.33, 1], [0.58, 0.12], [0.63, 0.04], [1, 0.02]], reach: 2.75 * M + 10, speed: 76, beat: 3, turn: 0.6, trunk: 1, sway: 0.01, surge: 0.12, sprint: 1.7, whim: 0.7, stay: [30, 80], prey: [], depth: [0.05, 0.35] },
+  { name: 'manta', plan: 'ray', length: 4.1 * M, girth: 2.75 * M, widest: 0, snout: 0, fin: 0, profile: [[0, 0.4], [0.06, 0.45], [0.33, 1], [0.58, 0.12], [0.63, 0.04], [1, 0.02]], reach: 2.75 * M + 10, speed: 76, beat: 3, turn: 0.6, trunk: 1, sway: 0.01, surge: 0.12, sprint: 1.7, whim: 0.7, stay: [30, 80], prey: [], levels: [1, 2] },
   // Giant squid, 8 m with its feeding tentacles: a 2 m mantle with small fins at its tip, huge eyes, eight arms
   // trailing and the two long tentacles beyond. It jets mantle first, in pulses.
-  { name: 'squid', plan: 'squid', length: 8 * M, girth: 22, widest: 0, snout: 0, fin: 0, profile: [[0, 0.35], [0.03, 1.1], [0.07, 0.8], [0.15, 1], [0.25, 0.9], [0.3, 1.05], [0.36, 0.85], [0.45, 1], [0.52, 0.5], [0.6, 0.18], [1, 0.12]], reach: 42, speed: 40, beat: 2.5, turn: 0.3, trunk: 1, sway: 0.03, surge: 0.6, sprint: 2.5, whim: 0.5, stay: [25, 60], prey: [], depth: [0.55, 0.85] },
+  { name: 'squid', plan: 'squid', length: 8 * M, girth: 22, widest: 0, snout: 0, fin: 0, profile: [[0, 0.35], [0.03, 1.1], [0.07, 0.8], [0.15, 1], [0.25, 0.9], [0.3, 1.05], [0.36, 0.85], [0.45, 1], [0.52, 0.5], [0.6, 0.18], [1, 0.12]], reach: 42, speed: 40, beat: 2.5, turn: 0.3, trunk: 1, sway: 0.03, surge: 0.6, sprint: 2.5, whim: 0.5, stay: [25, 60], prey: [], levels: [2, 3] },
   // A school of bigeye trevally, 60 cm each, the silver school of every drone shot from above: they keep together and
   // go one way; it parts round anything big and closes again.
-  { name: 'jacks', plan: 'school', length: 0.6 * M, girth: 4, widest: 0, snout: 0, fin: 0, reach: 260, speed: 55, beat: 0.5, turn: 3.5, trunk: 1, sway: 0.1, surge: 0, sprint: 3, whim: 1, stay: [30, 70], prey: [], depth: [0.15, 0.5] },
+  { name: 'jacks', plan: 'school', length: 0.6 * M, girth: 4, widest: 0, snout: 0, fin: 0, reach: 260, speed: 55, beat: 0.5, turn: 3.5, trunk: 1, sway: 0.1, surge: 0, sprint: 3, whim: 1, stay: [30, 70], prey: [], levels: [1, 2] },
 ]
 
 /** The sea's width in units (1600 by default): a wider sea, seen in the same window, shows the animals smaller. */
@@ -141,7 +142,8 @@ export type Animal = {
   trail: Point[]
   /** A school's fish; the animal itself is where the school means to go. */
   fish: Fish[]
-  /** How deep it is now (as Kind.depth), and the depth it is slowly making for. */
+  /** How deep it is now, 0 at level 1 to 1 at level 3 (between two while it rises or sinks), and the depth it is
+   * slowly making for. */
   depth: number
   dive: number
 }
@@ -266,8 +268,12 @@ export function createSea(h: number): Sea {
 }
 
 /** An animal of `kind` with its head at (x, y), its body straight behind it, making for `to`. */
-/** A depth it might keep, at random. */
-const deepIn = (k: Kind, random: () => number): number => k.depth[0] + random() * (k.depth[1] - k.depth[0])
+/** The depth of a level (1 to 3). */
+export const depthOf = (level: number): number => (level - 1) / 2
+/** One of the levels it keeps, at random, as a depth. */
+const deepIn = (k: Kind, random: () => number): number => depthOf(k.levels[Math.floor(random() * k.levels.length)]!)
+/** Two at different levels pass one over the other: neither has to give way. */
+export const apart = (a: Animal, b: Animal): boolean => Math.abs(a.depth - b.depth) >= 0.25
 
 function make(kind: number, x: number, y: number, heading: number, to: Point, random: () => number): Animal {
   const k = KINDS[kind]!
@@ -485,7 +491,8 @@ export function stepSea(sea: Sea, dt: number, tile: number, random: () => number
     for (const other of sea.animals) {
       const ko = KINDS[other.kind]!
       // A school does not plan its way round anything: its fish part round it as it comes (school.ts).
-      if (other === s || k.plan === 'school' || ko.plan === 'school' || (s.mode === 'chase' && s.prey === other) || ko.length < k.length * 0.3) continue
+      // Nor to one at another level: it passes over or under.
+      if (other === s || k.plan === 'school' || ko.plan === 'school' || (s.mode === 'chase' && s.prey === other) || ko.length < k.length * 0.3 || apart(s, other)) continue
       const big = ko.length > k.length * 2.5
       // Each one's body and all it sweeps, and a tile of water between.
       const room = k.reach + ko.reach + tile
@@ -552,10 +559,10 @@ export function stepSea(sea: Sea, dt: number, tile: number, random: () => number
       s.way = 0
     }
 
-    // Up and down, slowly: now and then it makes for another depth of those its kind keeps to; a hunter, its prey's.
-    if (random() < 0.06 * dt) s.dive = deepIn(k, random)
+    // Up and down, slowly: now and then it makes for another of the levels its kind keeps to; a hunter, its prey's.
+    if (random() < 0.04 * dt) s.dive = deepIn(k, random)
     if (s.mode === 'chase' && s.prey !== undefined) s.dive = s.prey.depth
-    s.depth += clamp(s.dive - s.depth, -0.03 * dt, 0.03 * dt)
+    s.depth += clamp(s.dive - s.depth, -0.05 * dt, 0.05 * dt)
 
     // The pace is taken up fast and let go slowly, as an animal kicks and then coasts.
     const want = k.speed * s.pace

@@ -3,7 +3,7 @@
 // not too far. And above them all, one: clear of anything big. A fish that sees a body coming darts off at once; the
 // school bursts open round it and, once it has passed, the fish draw together again.
 
-import { KINDS, discsOf, type Animal, type Fish, type Point } from './sim'
+import { KINDS, apart, discsOf, type Animal, type Fish, type Point } from './sim'
 
 /** Turning, in radians a second, at the most: quick, but a fish still swings through a turn. */
 const TURN = 7
@@ -24,7 +24,8 @@ export function stepSchool(s: Animal, animals: Animal[], dt: number, random: () 
   const cy = fish.reduce((t, f) => t + f.y, 0) / fish.length
   const threats: (Point & { r: number })[] = []
   for (const o of animals) {
-    if (o === s || KINDS[o.kind]!.plan === 'school') continue
+    // One at another level passes over or under the school: it does not part for it.
+    if (o === s || KINDS[o.kind]!.plan === 'school' || apart(s, o)) continue
     const ko = KINDS[o.kind]!
     if (Math.hypot(o.x - cx, o.y - cy) > ko.length * 1.3 + 500) continue
     for (const c of discsOf(o)) threats.push({ x: c.x, y: c.y, r: c.r + bl * 1.5 })

@@ -8,15 +8,16 @@ Um mar escuro visto de cima, ao vivo, e os animais que passam por ele no tamanho
 - **Comportamento:**
   - passeiam, dão arrancadas e deslizam, cada espécie no seu ritmo: o golfinho é inquieto, a baleia quase não vira e só atravessa;
   - caçam o que caçam na vida real: a orca persegue tubarões, golfinhos e mantas; o tubarão-tigre persegue a tartaruga; o branco persegue o galha-preta, o golfinho e a tartaruga; golfinho, tigre e martelo vão atrás do cardume. A presa foge;
-  - quando dois vão se cruzar, cada um prevê onde o outro vai estar e se afasta um pouco para o lado, cedo, sem parar. Quem vai de encontro ao corpo do outro diminui o ritmo para passar por trás, e o menor dá passagem ao maior. A baleia não muda de rumo por causa de uma tartaruga: o pequeno sai da frente, rápido;
+  - quando dois no mesmo nível vão se cruzar, cada um prevê onde o outro vai estar e se afasta um pouco para o lado, cedo, sem parar. Quem vai de encontro ao corpo do outro diminui o ritmo para passar por trás, e o menor dá passagem ao maior. A baleia não muda de rumo por causa de uma tartaruga: o pequeno sai da frente, rápido;
   - o cardume (160 xaréus, o cardume prateado clássico das imagens de drone) anda junto, apertado e na mesma direção. Quando um animal grande passa no meio, ele se abre bem na frente da cabeça dele, as duas metades passam pelos lados, piscando prateado ao virar, e depois se juntam de novo;
-  - cada um nada numa profundidade que muda devagar, dentro do que a espécie costuma: baleia, orca, golfinho, tartaruga e manta perto da superfície; os tubarões no meio; a lula-gigante funda. Quem caça vai para a profundidade da presa. Quando dois se sobrepõem, o mais raso passa por cima.
+  - cada um nada num de três níveis: 1, logo abaixo da superfície; 2, meia-água; 3, tão fundo que quase some. De vez em quando sobe ou desce, devagar, para outro dos níveis que a espécie costuma usar: baleia, orca, golfinho, tartaruga e manta ficam no 1 e no 2; o martelo e a lula-gigante, no 2 e no 3. Quem caça vai para o nível da presa. Animais em níveis diferentes não desviam um do outro: o mais raso passa por cima.
 - **Movimento de cada corpo:** a simulação anda 60 vezes por segundo, e o corpo dobra ao longo do caminho que a cabeça fez.
   - os tubarões ondulam de um lado para o outro;
   - baleia, orca e golfinho batem a cauda para cima e para baixo e quase não balançam de lado;
   - o casco da tartaruga e o disco da manta são rígidos: a tartaruga rema com as nadadeiras da frente e plana, e a manta bate as asas devagar;
   - a lula vai com o manto à frente, em jatos, com os braços e os tentáculos atrás.
-- **Cores reais vistas de cima:** o dorso de cada espécie, mais escuro no meio e mais claro para os lados. Orca e manta usam um preto levemente clareado, senão sumiriam no mar escuro. Quanto mais fundo, mais o animal se apaga na cor da água, mais azulada; no estilo liso, também fica um pouco desfocado.
+- **Cores reais vistas de cima:** o dorso de cada espécie, mais escuro no meio e mais claro para os lados. Orca e manta usam um preto levemente clareado, senão sumiriam no mar escuro. Quanto mais fundo, mais o animal se apaga na água: no estilo liso, a cor vai para a da água, um pouco mais azulada, e o contorno desfoca; no mosaico, os ladrilhos ficam transparentes (metade no nível 2, quase invisíveis no 3).
+- **Superfície:** a luz que as ondulações da superfície focam (cáusticas) passa pelo dorso dos animais, presa à água enquanto eles nadam por baixo, mais forte nos rasos e mais fraca à noite. No tema escuro, a lua faz brilhos breves na água, por cima de tudo.
 - **Mosaico:** cada ladrilho acende inteiro com a cor do animal que está embaixo, um pouco mais claro ou mais escuro que os vizinhos, com uma letra recortada. Os xaréus são mais finos que um ladrilho, então cada um acende um traço de ladrilhos ao longo do corpo, e o cardume aparece como muitos traços paralelos, todos na mesma direção.
 
 ## Controles
@@ -24,9 +25,9 @@ Um mar escuro visto de cima, ao vivo, e os animais que passam por ele no tamanho
 Um painel flutuante à direita, de vidro fosco transparente (os animais aparecem passando por trás). No topo, quantos animais estão na tela, o botão de tema (sol para o claro, lua para o escuro) e o de pausa. Logo abaixo, os dois modos:
 
 - **Mar aberto:** os animais entram e saem. Escolha quantos podem aparecer de uma vez (− 1 a 8 +) e quais espécies podem entrar, em botões agrupados (Tubarões, Mamíferos, Outros), com um ponto verde em quem está na tela agora. Desligar uma espécie, ou diminuir o número, faz os que sobram irem embora nadando, sem sumir de repente.
-- **Observar:** um animal sozinho, para avaliar formato e movimento. Ele continua nadando, virando e acelerando como sempre, mas a câmera o acompanha e o mantém no meio da área livre. Partículas na água passam por ele e mostram o deslocamento. Os cartões mostram o tamanho real de cada um, e as setas ‹ › passam para o próximo animal.
+- **Observar:** um animal sozinho, para avaliar formato e movimento. Ele continua nadando, virando e acelerando como sempre, mas a câmera o acompanha e o mantém no meio da área livre. Partículas na água passam por ele e mostram o deslocamento. Os cartões mostram o tamanho real de cada um, e as setas ‹ › passam para o próximo animal. Em Profundidade (Raso, Meio, Fundo) se escolhe o nível dele; ao trocar, ele sobe ou desce até lá, devagar.
 
-Valem para os dois modos: mosaico ou liso, distância (perto ou longe), tamanho do ladrilho do mosaico e velocidade (0,5×, 1×, 2×).
+Valem para os dois modos: mosaico ou liso, luz da superfície ligada ou não, distância (perto ou longe), tamanho do ladrilho do mosaico e velocidade (0,5×, 1×, 2×).
 
 Atalhos: `Espaço` pausa, `H` esconde o painel, `←` `→` trocam o animal observado, `Esc` volta ao mar aberto.
 
@@ -60,6 +61,7 @@ Opções:
 - `atOnce`: quantos animais no máximo de uma vez (o cardume conta como um). Padrão `4`.
 - `species`: as espécies que podem entrar, por nome (`'white'`, `'hammer'`, `'tiger'`, `'blacktip'`, `'blue'`, `'orca'`, `'dolphin'`, `'turtle'`, `'manta'`, `'squid'`, `'jacks'`). Padrão: todas.
 - `speed`: velocidade do tempo. `1` é tempo real. Padrão `1`.
+- `surface`: `true` (padrão) liga a luz da superfície (cáusticas e brilhos da lua); `false` desliga.
 - `background`: cor da água no tema escuro. Padrão `#191919`.
 - `controls`: `true` mostra o painel de controles. Padrão `false`, para quem incorpora num site não ganhar um painel sem pedir. O `index.html` liga.
 

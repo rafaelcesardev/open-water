@@ -12,7 +12,7 @@
 
 import { DRAW } from './draw/all'
 import { mountPanel, type Settings } from './panel'
-import { KINDS, WIDTH, createSea, place, setWidth, shift, spineOf, stepSea, type Animal, type Kind, type Point, type Sea } from './sim'
+import { KINDS, WIDTH, createSea, depthOf, discsOf, place, setWidth, shift, spineOf, stepSea, type Animal, type Kind, type Point, type Sea } from './sim'
 
 export type Options = {
   /** 'mosaic' (default): the animals as glyph tiles. 'smooth': the drawn animals themselves. */
@@ -29,6 +29,9 @@ export type Options = {
   species?: Kind['name'][]
   /** How fast time runs: 1 real time. Default 1. */
   speed?: number
+  /** Light from the surface: caustics rippling over the animals, the shallower the brighter, and at night the moon
+   * glinting on the water. Default true. */
+  surface?: boolean
   /** The dark theme's water. Default #191919. */
   background?: string
   /** A floating panel on the left to change all of the above as it runs; the viewer's choices are remembered. */
@@ -36,12 +39,25 @@ export type Options = {
 }
 
 const LIGHT = '#dde6e9'
-/** The water a deep animal fades into, seen through it from above: bluer than the surface, darker at night. */
-const DEEP_DARK = '#16202a'
-const DEEP_LIGHT = '#a9c2cc'
+/** The water a deep animal fades into, seen through it from above: about the water's own colour, a little bluer, so
+ * the deeper the more see-through it looks, at the third level all but gone. */
+const DEEP_DARK = '#171d24'
+const DEEP_LIGHT = '#c9d8de'
 /** How far the deepest fade into it, and how blurred they are, in sea units (the smooth style only). */
-const FADE = 0.6
+const FADE = 0.8
 const BLUR = 7
+/** The mosaic: the deepest only tinted toward it a little, and their tiles this much see-through instead (its tiles
+ * take each a shade of their own, which would darken a faded colour back out of the water). */
+const TINT = 0.3
+const CLEAR = 0.85
+/** Caustics: how bright on an animal at the surface, by day and by night; and the two nets of them, each as its
+ * scale and its drift in units a second, crossing so the light shimmers. */
+const CAUSTIC_DAY = 0.26
+const CAUSTIC_NIGHT = 0.12
+const NETS: [number, number, number][] = [
+  [1, 9, 4],
+  [1.37, -6, 7],
+]
 const SAVED = 'shark-night:settings'
 
 const GLYPHS = '$%tSX8@:;#S%X8tS'
@@ -77,6 +93,40 @@ function tileTable(): { shade: number[]; glyph: string[] } {
   return { shade, glyph }
 }
 
+/**
+ * Caustic light, as the surface's ripples focus the sun or the moon on whatever lies below: a net of bright lines
+ * round cells about half a metre across, tiling seamlessly, one pixel a unit of the sea. Made once.
+ */
+function causticNet(): ImageData {
+  const n = 128
+  const rand = rng(5)
+  const seeds = Array.from({ length: 10 }, () => [rand() * n, rand() * n] as const)
+  const img = new ImageData(n, n)
+  for (let y = 0; y < n; y += 1) {
+    for (let x = 0; x < n; x += 1) {
+      // Bright where two cells meet: the nearest seed and the next are about as far. The water bends them into
+      // wavering lines (waves whole times across, so it still tiles).
+      const wx = x + 5 * Math.sin((4 * Math.PI * y) / n) + 3 * Math.sin((6 * Math.PI * (x + y)) / n)
+      const wy = y + 5 * Math.sin((4 * Math.PI * x) / n) + 3 * Math.sin((6 * Math.PI * (x - y)) / n)
+      let d1 = Infinity
+      let d2 = Infinity
+      for (const [sx, sy] of seeds) {
+        for (let ox = -n; ox <= n; ox += n) {
+          for (let oy = -n; oy <= n; oy += n) {
+            const d = Math.hypot(wx - sx - ox, wy - sy - oy)
+            if (d < d1) [d1, d2] = [d, d1]
+            else if (d < d2) d2 = d
+          }
+        }
+      }
+      const i = (y * n + x) * 4
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255
+      img.data[i + 3] = Math.max(0, 1 - (d2 - d1) / 10) ** 3 * 255
+    }
+  }
+  return img
+}
+
 /** Starts Shark Night in `host` (any element; the canvas fills it). Returns a function that stops it. */
 export function mountSharkNight(host: HTMLElement, options: Options = {}): () => void {
   const settings: Settings = {
@@ -89,6 +139,8 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     speed: options.speed ?? 1,
     paused: false,
     observe: null,
+    level: 1,
+    surface: options.surface ?? true,
   }
   if (options.controls === true) {
     // The viewer's last choices, if this browser kept them.
@@ -105,6 +157,8 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     settings.cell = number(settings.cell, 6, 20, 10)
     settings.atOnce = number(settings.atOnce, 1, 8, 4)
     settings.speed = [0.5, 1, 2].includes(settings.speed) ? settings.speed : 1
+    settings.surface = settings.surface !== false
+    settings.level = [1, 2, 3].includes(settings.level) ? settings.level : 1
     settings.species = Array.isArray(settings.species) ? KINDS.map(k => k.name).filter(n => settings.species.includes(n)) : KINDS.map(k => k.name)
     // Watching one animal is for now, not for next time.
     settings.observe = null
@@ -129,6 +183,12 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
   const layer = document.createElement('canvas')
   const lowLayer = document.createElement('canvas')
   const lowLayerCtx = lowLayer.getContext('2d', { willReadFrequently: true })!
+  const net = causticNet()
+  // Its pattern for each layer, from a canvas of the same kind (the mosaic's works in memory, the other on the GPU):
+  // crossing between the two every frame would cost more than all the rest.
+  const nets = new Map<CanvasRenderingContext2D, CanvasPattern>()
+  /** Seconds of sea gone by, for the light at the surface: it stops when time does. */
+  let clock = 0
 
   // Set by layout(), which runs before anything reads it.
   let sea!: Sea
@@ -224,7 +284,9 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
       const world = Math.max(framing(k, 3) * 4, 4000)
       setWidth(world)
       const own = createSea(Math.round((world * canvas.height) / canvas.width))
-      const focus = focusOf(place(own, kind))
+      const a = place(own, kind)
+      a.depth = a.dive = depthOf(settings.level)
+      const focus = focusOf(a)
       watch = { sea: own, kind: k, view: framing(k, settings.zoomOut), x: focus.x, y: focus.y }
     }
     water()
@@ -263,6 +325,35 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
           const x = ((gx + rand()) * g - v.left) * v.s
           const y = ((gy + rand()) * g - v.top) * v.s
           ctx.fillRect(x, y, 3 * dpr, 1.2 * dpr)
+        }
+      }
+    }
+  }
+
+  /**
+   * The moon caught on ripples at the surface, over everything: brief glints here and there, fixed in the water. Each
+   * patch of water sparks now and then at its own rhythm. In the mosaic, a glint lights a tile.
+   */
+  function glints(v: ReturnType<typeof view>): void {
+    const g = 90
+    const size = settings.cell * scale
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    const right = v.left + canvas.width / v.s
+    const bottom = v.top + canvas.height / v.s
+    for (let gx = Math.floor(v.left / g); gx * g < right; gx += 1) {
+      for (let gy = Math.floor(v.top / g); gy * g < bottom; gy += 1) {
+        const rand = rng(Math.imul(gx, 83492791) ^ Math.imul(gy, 2654435761))
+        const spark = Math.sin(clock * (0.8 + rand() * 1.2) + rand() * 7)
+        if (spark < 0.97) continue
+        const x = ((gx + rand()) * g - v.left) * v.s
+        const y = ((gy + rand()) * g - v.top) * v.s
+        const glow = (spark - 0.97) / 0.03
+        if (settings.style === 'mosaic') {
+          ctx.fillStyle = `rgba(214,226,236,${0.35 * glow})`
+          ctx.fillRect(Math.floor(x / size) * size, Math.floor(y / size) * size, size, size)
+        } else {
+          ctx.fillStyle = `rgba(214,226,236,${0.7 * glow})`
+          ctx.fillRect(x - 5 * v.s, y - 0.8 * v.s, 10 * v.s, 1.6 * v.s)
         }
       }
     }
@@ -311,32 +402,65 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
   }
 
   /**
-   * Draws `a` alone on `c` (cleared to `onto`'s size), seen at scale `s` from (`left`, `top`), fades it toward the deep
-   * water as deep as it swims, and lays it on `onto`, blurred by `blur` pixels.
+   * Draws `a` alone on `c` (sized as `onto`), seen at scale `s` from (`left`, `top`), fades it toward the deep water as
+   * deep as it swims, lights it with the caustics, and lays it on `onto`, blurred by `blur` pixels.
    */
-  function lay(onto: CanvasRenderingContext2D, c: CanvasRenderingContext2D, a: Animal, tile: number, s: number, left: number, top: number, blur: number): void {
+  function lay(onto: CanvasRenderingContext2D, c: CanvasRenderingContext2D, a: Animal, tile: number, s: number, left: number, top: number, blur: number): [number, number, number, number] | undefined {
     const { width, height } = onto.canvas
     if (c.canvas.width !== width || c.canvas.height !== height) {
       c.canvas.width = width
       c.canvas.height = height
-    } else {
-      c.setTransform(1, 0, 0, 1, 0, 0)
-      c.clearRect(0, 0, width, height)
     }
+    // Only the water round it is worked: its body, all it sweeps, and the blur's spread.
+    const k = KINDS[a.kind]!
+    const discs = discsOf(a)
+    const pad = (k.reach + 20) * s + blur * 2 + 2
+    const x0 = Math.max(0, Math.floor(Math.min(...discs.map(d => (d.x - d.r - left) * s)) - pad))
+    const y0 = Math.max(0, Math.floor(Math.min(...discs.map(d => (d.y - d.r - top) * s)) - pad))
+    const x1 = Math.min(width, Math.ceil(Math.max(...discs.map(d => (d.x + d.r - left) * s)) + pad))
+    const y1 = Math.min(height, Math.ceil(Math.max(...discs.map(d => (d.y + d.r - top) * s)) + pad))
+    if (x1 <= x0 || y1 <= y0) return undefined
+    const [w, h] = [x1 - x0, y1 - y0]
+    c.setTransform(1, 0, 0, 1, 0, 0)
+    c.clearRect(x0, y0, w, h)
     c.setTransform(s, 0, 0, s, -left * s, -top * s)
+    // A mosaic tile takes one sample: smoothing the caustics there would only cost.
+    c.imageSmoothingEnabled = tile === 0
     c.lineJoin = 'round'
-    DRAW[KINDS[a.kind]!.plan](c, a, tile)
+    DRAW[k.plan](c, a, tile)
     c.setTransform(1, 0, 0, 1, 0, 0)
     c.globalCompositeOperation = 'source-atop'
-    c.globalAlpha = a.depth * FADE
+    c.globalAlpha = a.depth * (tile > 0 ? TINT : FADE)
     c.fillStyle = settings.theme === 'light' ? DEEP_LIGHT : DEEP_DARK
-    c.fillRect(0, 0, width, height)
+    c.fillRect(x0, y0, w, h)
+    if (settings.surface) {
+      // The caustics play over its back, fixed in the water as it swims under them, faint as it goes deeper. The
+      // mosaic's tile is coarser than their lines: there they are drawn larger, so they still read.
+      const coarse = tile > 0 ? 2.5 : 1
+      c.globalAlpha = (1 - a.depth) ** 1.5 * (settings.theme === 'light' ? CAUSTIC_DAY : CAUSTIC_NIGHT)
+      let pattern = nets.get(c)
+      if (pattern === undefined) {
+        const source = document.createElement('canvas')
+        source.width = net.width
+        source.height = net.height
+        source.getContext('2d', { willReadFrequently: c === lowLayerCtx })!.putImageData(net, 0, 0)
+        pattern = c.createPattern(source, 'repeat')!
+        nets.set(c, pattern)
+      }
+      for (const [u, dx, dy] of NETS) {
+        const q = u * coarse * s
+        pattern.setTransform(new DOMMatrix([q, 0, 0, q, (dx * clock - left) * s, (dy * clock - top) * s]))
+        c.fillStyle = pattern
+        c.fillRect(x0, y0, w, h)
+      }
+    }
     c.globalAlpha = 1
     c.globalCompositeOperation = 'source-over'
     onto.setTransform(1, 0, 0, 1, 0, 0)
     if (blur >= 0.5) onto.filter = `blur(${blur.toFixed(1)}px)`
-    onto.drawImage(c.canvas, 0, 0)
+    onto.drawImage(c.canvas, x0, y0, w, h, x0, y0, w, h)
     onto.filter = 'none'
+    return [x0, y0, w, h]
   }
 
   function paint(): void {
@@ -350,13 +474,22 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     if (settings.style === 'smooth') {
       const c = layer.getContext('2d')!
       for (const a of animals) lay(ctx, c, a, 0, v.s, v.left, v.top, Math.max(0, a.depth - 0.25) * BLUR * v.s)
+      if (settings.surface && settings.theme === 'dark') glints(v)
       return
     }
     // The tiles keep their size on screen whatever the framing: closer in, a tile covers less of the animal.
     const tu = (cell * scale) / v.s
     lctx.setTransform(1, 0, 0, 1, 0, 0)
     lctx.clearRect(0, 0, cols, rows)
-    for (const a of animals) lay(lctx, lowLayerCtx, a, tu, 1 / tu, v.left, v.top, 0)
+    // How deep the body lighting each tile swims: the shallowest over it, as it is drawn last.
+    const deep = new Float32Array(cols * rows)
+    for (const a of animals) {
+      const box = lay(lctx, lowLayerCtx, a, tu, 1 / tu, v.left, v.top, 0)
+      if (box === undefined) continue
+      const [x0, y0, w, h] = box
+      const body = lowLayerCtx.getImageData(x0, y0, w, h).data
+      for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) if (body[(y * w + x) * 4 + 3]! >= 128) deep[(y0 + y) * cols + x0 + x] = a.depth
+    }
     const px = lctx.getImageData(0, 0, cols, rows).data
     const size = cell * scale
     const light = settings.theme === 'light'
@@ -374,6 +507,7 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
         const [cr, cg, cb] = [px[i]!, px[i + 1]!, px[i + 2]!]
         const x = c * size
         const y = r * size
+        ctx.globalAlpha = 1 - deep[r * cols + c]! * CLEAR
         ctx.fillStyle = `rgb(${cr * shade},${cg * shade},${cb * shade})`
         ctx.fillRect(x + inset, y + inset, size - 2 * inset, size - 2 * inset)
         const g = tiles.glyph[tile]!
@@ -386,6 +520,8 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
         }
       }
     }
+    ctx.globalAlpha = 1
+    if (settings.surface && settings.theme === 'dark') glints(v)
   }
 
   layout()
@@ -407,12 +543,15 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
         // The camera eases after the animal, so a burst or a turn shows as the animal moving in the frame.
         const a = watch.sea.animals[0]
         if (a !== undefined) {
+          // At the level chosen: it rises or sinks there, slowly, as it would.
+          a.dive = depthOf(settings.level)
           const f = focusOf(a)
           watch.x += (f.x - watch.x) * 0.04
           watch.y += (f.y - watch.y) * 0.04
         }
       }
       owed -= STEP
+      clock += STEP
       stepped = true
     }
     if (stepped) paint()

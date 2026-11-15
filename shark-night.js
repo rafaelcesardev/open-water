@@ -12,7 +12,7 @@ function stepSchool(s, animals, dt, random) {
   const cy = fish.reduce((t, f) => t + f.y, 0) / fish.length;
   const threats = [];
   for (const o of animals) {
-    if (o === s || KINDS[o.kind].plan === "school") continue;
+    if (o === s || KINDS[o.kind].plan === "school" || apart(s, o)) continue;
     const ko = KINDS[o.kind];
     if (Math.hypot(o.x - cx, o.y - cy) > ko.length * 1.3 + 500) continue;
     for (const c of discsOf(o)) threats.push({ x: c.x, y: c.y, r: c.r + bl * 1.5 });
@@ -106,31 +106,31 @@ var shark = { plan: "shark", trunk: 0.8, sway: 0.05, surge: 0, whim: 1, stay: [3
 var cetacean = { plan: "cetacean", widest: 0, snout: 0, fin: 0, trunk: 0.9, sway: 4e-3, surge: 0, stay: [25, 80] };
 var KINDS = [
   // Great white, 4.5 m: heavy and spindle-shaped, a rounded conical snout, long sickle pectorals.
-  { ...shark, name: "white", length: 4.5 * M, girth: 40, widest: 0.33, snout: 0.62, fin: 83, reach: 125, speed: 62, beat: 2.6, turn: 0.6, sprint: 2.3, prey: ["blacktip", "dolphin", "turtle"], depth: [0.2, 0.65] },
+  { ...shark, name: "white", length: 4.5 * M, girth: 40, widest: 0.33, snout: 0.62, fin: 83, reach: 125, speed: 62, beat: 2.6, turn: 0.6, sprint: 2.3, prey: ["blacktip", "dolphin", "turtle"], levels: [1, 2, 3] },
   // Great hammerhead, 4 m: the cephalofoil on a body already thick right behind it, short pectorals.
-  { ...shark, name: "hammer", length: 4 * M, girth: 24, widest: 0.34, snout: 0.5, fin: 44, reach: 80, speed: 86, beat: 2, turn: 0.6, sprint: 2.3, hammer: true, prey: ["blacktip", "jacks"], depth: [0.3, 0.75] },
+  { ...shark, name: "hammer", length: 4 * M, girth: 24, widest: 0.34, snout: 0.5, fin: 44, reach: 80, speed: 86, beat: 2, turn: 0.6, sprint: 2.3, hammer: true, prey: ["blacktip", "jacks"], levels: [2, 3] },
   // Tiger, 3.8 m: a broad blunt head, almost square from above, dark bars across the back. The turtles' hunter.
-  { ...shark, name: "tiger", length: 3.8 * M, girth: 27, widest: 0.3, snout: 0.5, fin: 53, reach: 85, speed: 74, beat: 2.2, turn: 0.6, sprint: 2.3, prey: ["turtle", "blacktip", "jacks"], depth: [0.2, 0.7] },
+  { ...shark, name: "tiger", length: 3.8 * M, girth: 27, widest: 0.3, snout: 0.5, fin: 53, reach: 85, speed: 74, beat: 2.2, turn: 0.6, sprint: 2.3, prey: ["turtle", "blacktip", "jacks"], levels: [1, 2, 3] },
   // Blacktip, 1.6 m: slender and quick, a rounded snout, black-tipped fins.
-  { ...shark, name: "blacktip", length: 1.6 * M, girth: 10, widest: 0.32, snout: 0.6, fin: 23, reach: 36, speed: 100, beat: 0.9, turn: 0.6, sprint: 2.3, whim: 1.3, prey: [], depth: [0.1, 0.5] },
+  { ...shark, name: "blacktip", length: 1.6 * M, girth: 10, widest: 0.32, snout: 0.6, fin: 23, reach: 36, speed: 100, beat: 0.9, turn: 0.6, sprint: 2.3, whim: 1.3, prey: [], levels: [1, 2] },
   // Blue whale, 24 m: long and slender, a broad flat U-shaped head, a small fin far back, flukes a quarter its
   // length across. It barely turns; it passes through.
-  { ...cetacean, name: "blue", length: 24 * M, girth: 0.07 * 24 * M, profile: [[0, 0.45], [0.05, 0.78], [0.15, 0.93], [0.35, 1], [0.6, 0.82], [0.8, 0.42], [0.9, 0.18]], reach: 330, speed: 128, beat: 6, turn: 0.8, sprint: 1.4, whim: 0.2, stay: [4, 14], prey: [], depth: [0.05, 0.3] },
+  { ...cetacean, name: "blue", length: 24 * M, girth: 0.07 * 24 * M, profile: [[0, 0.45], [0.05, 0.78], [0.15, 0.93], [0.35, 1], [0.6, 0.82], [0.8, 0.42], [0.9, 0.18]], reach: 330, speed: 128, beat: 6, turn: 0.8, sprint: 1.4, whim: 0.2, stay: [4, 14], prey: [], levels: [1, 2] },
   // Orca, 7 m: robust, a blunt rounded head, broad paddle flippers.
-  { ...cetacean, name: "orca", length: 7 * M, girth: 0.09 * 7 * M, profile: [[0, 0.4], [0.06, 0.8], [0.25, 1], [0.5, 0.9], [0.75, 0.45], [0.9, 0.17]], reach: 135, speed: 120, beat: 1.6, turn: 0.45, sprint: 2.5, whim: 1.2, prey: ["white", "tiger", "hammer", "blacktip", "dolphin", "manta"], depth: [0.05, 0.4] },
+  { ...cetacean, name: "orca", length: 7 * M, girth: 0.09 * 7 * M, profile: [[0, 0.4], [0.06, 0.8], [0.25, 1], [0.5, 0.9], [0.75, 0.45], [0.9, 0.17]], reach: 135, speed: 120, beat: 1.6, turn: 0.45, sprint: 2.5, whim: 1.2, prey: ["white", "tiger", "hammer", "blacktip", "dolphin", "manta"], levels: [1, 2] },
   // Bottlenose dolphin, 2.7 m: a short beak before the melon, small pointed flippers. Quick and restless.
-  { ...cetacean, name: "dolphin", length: 2.7 * M, girth: 0.093 * 2.7 * M, profile: [[0, 0.1], [0.05, 0.28], [0.09, 0.6], [0.3, 1], [0.55, 0.85], [0.78, 0.38], [0.9, 0.15]], reach: 50, speed: 140, beat: 0.8, turn: 0.3, sprint: 2.5, whim: 2.5, prey: ["jacks"], depth: [0, 0.35] },
+  { ...cetacean, name: "dolphin", length: 2.7 * M, girth: 0.093 * 2.7 * M, profile: [[0, 0.1], [0.05, 0.28], [0.09, 0.6], [0.3, 1], [0.55, 0.85], [0.78, 0.38], [0.9, 0.15]], reach: 50, speed: 140, beat: 0.8, turn: 0.3, sprint: 2.5, whim: 2.5, prey: ["jacks"], levels: [1, 2] },
   // Green sea turtle, 1.2 m: an oval shell, a small head, long front flippers it flies with, stroke and glide.
-  { name: "turtle", plan: "turtle", length: 1.2 * M, girth: 32, widest: 0, snout: 0, fin: 0, profile: [[0, 0.25], [0.1, 0.32], [0.17, 0.8], [0.42, 1], [0.7, 0.75], [0.88, 0.3], [1, 0.05]], reach: 64, speed: 48, beat: 2.4, turn: 0.5, trunk: 1, sway: 0, surge: 0.35, sprint: 3, whim: 0.8, stay: [30, 80], prey: [], depth: [0, 0.35] },
+  { name: "turtle", plan: "turtle", length: 1.2 * M, girth: 32, widest: 0, snout: 0, fin: 0, profile: [[0, 0.25], [0.1, 0.32], [0.17, 0.8], [0.42, 1], [0.7, 0.75], [0.88, 0.3], [1, 0.05]], reach: 64, speed: 48, beat: 2.4, turn: 0.5, trunk: 1, sway: 0, surge: 0.35, sprint: 3, whim: 0.8, stay: [30, 80], prey: [], levels: [1, 2] },
   // Oceanic manta, 5.5 m across: a wide rigid disc, the horn-like cephalic fins in front, a short whip tail. Its
   // wings beat slowly, a wave running back along them.
-  { name: "manta", plan: "ray", length: 4.1 * M, girth: 2.75 * M, widest: 0, snout: 0, fin: 0, profile: [[0, 0.4], [0.06, 0.45], [0.33, 1], [0.58, 0.12], [0.63, 0.04], [1, 0.02]], reach: 2.75 * M + 10, speed: 76, beat: 3, turn: 0.6, trunk: 1, sway: 0.01, surge: 0.12, sprint: 1.7, whim: 0.7, stay: [30, 80], prey: [], depth: [0.05, 0.35] },
+  { name: "manta", plan: "ray", length: 4.1 * M, girth: 2.75 * M, widest: 0, snout: 0, fin: 0, profile: [[0, 0.4], [0.06, 0.45], [0.33, 1], [0.58, 0.12], [0.63, 0.04], [1, 0.02]], reach: 2.75 * M + 10, speed: 76, beat: 3, turn: 0.6, trunk: 1, sway: 0.01, surge: 0.12, sprint: 1.7, whim: 0.7, stay: [30, 80], prey: [], levels: [1, 2] },
   // Giant squid, 8 m with its feeding tentacles: a 2 m mantle with small fins at its tip, huge eyes, eight arms
   // trailing and the two long tentacles beyond. It jets mantle first, in pulses.
-  { name: "squid", plan: "squid", length: 8 * M, girth: 22, widest: 0, snout: 0, fin: 0, profile: [[0, 0.35], [0.03, 1.1], [0.07, 0.8], [0.15, 1], [0.25, 0.9], [0.3, 1.05], [0.36, 0.85], [0.45, 1], [0.52, 0.5], [0.6, 0.18], [1, 0.12]], reach: 42, speed: 40, beat: 2.5, turn: 0.3, trunk: 1, sway: 0.03, surge: 0.6, sprint: 2.5, whim: 0.5, stay: [25, 60], prey: [], depth: [0.55, 0.85] },
+  { name: "squid", plan: "squid", length: 8 * M, girth: 22, widest: 0, snout: 0, fin: 0, profile: [[0, 0.35], [0.03, 1.1], [0.07, 0.8], [0.15, 1], [0.25, 0.9], [0.3, 1.05], [0.36, 0.85], [0.45, 1], [0.52, 0.5], [0.6, 0.18], [1, 0.12]], reach: 42, speed: 40, beat: 2.5, turn: 0.3, trunk: 1, sway: 0.03, surge: 0.6, sprint: 2.5, whim: 0.5, stay: [25, 60], prey: [], levels: [2, 3] },
   // A school of bigeye trevally, 60 cm each, the silver school of every drone shot from above: they keep together and
   // go one way; it parts round anything big and closes again.
-  { name: "jacks", plan: "school", length: 0.6 * M, girth: 4, widest: 0, snout: 0, fin: 0, reach: 260, speed: 55, beat: 0.5, turn: 3.5, trunk: 1, sway: 0.1, surge: 0, sprint: 3, whim: 1, stay: [30, 70], prey: [], depth: [0.15, 0.5] }
+  { name: "jacks", plan: "school", length: 0.6 * M, girth: 4, widest: 0, snout: 0, fin: 0, reach: 260, speed: 55, beat: 0.5, turn: 3.5, trunk: 1, sway: 0.1, surge: 0, sprint: 3, whim: 1, stay: [30, 70], prey: [], levels: [1, 2] }
 ];
 var WIDTH = 1600;
 function setWidth(width) {
@@ -221,7 +221,9 @@ function tailOf(a) {
 function createSea(h) {
   return { h, animals: [], next: 0, gone: -1, chases: 0, atOnce: 4, allowed: new Set(KINDS.map((_, i) => i)) };
 }
-var deepIn = (k, random) => k.depth[0] + random() * (k.depth[1] - k.depth[0]);
+var depthOf = (level) => (level - 1) / 2;
+var deepIn = (k, random) => depthOf(k.levels[Math.floor(random() * k.levels.length)]);
+var apart = (a, b) => Math.abs(a.depth - b.depth) >= 0.25;
 function make(kind, x, y, heading, to, random) {
   const k = KINDS[kind];
   const trail = [];
@@ -393,7 +395,7 @@ function stepSea(sea, dt, tile, random = Math.random) {
     let giant = false;
     for (const other of sea.animals) {
       const ko = KINDS[other.kind];
-      if (other === s || k.plan === "school" || ko.plan === "school" || s.mode === "chase" && s.prey === other || ko.length < k.length * 0.3) continue;
+      if (other === s || k.plan === "school" || ko.plan === "school" || s.mode === "chase" && s.prey === other || ko.length < k.length * 0.3 || apart(s, other)) continue;
       const big = ko.length > k.length * 2.5;
       const room = k.reach + ko.reach + tile;
       const vo = Math.max(other.speed, 1);
@@ -451,9 +453,9 @@ function stepSea(sea, dt, tile, random = Math.random) {
     } else {
       s.way = 0;
     }
-    if (random() < 0.06 * dt) s.dive = deepIn(k, random);
+    if (random() < 0.04 * dt) s.dive = deepIn(k, random);
     if (s.mode === "chase" && s.prey !== void 0) s.dive = s.prey.depth;
-    s.depth += clamp(s.dive - s.depth, -0.03 * dt, 0.03 * dt);
+    s.depth += clamp(s.dive - s.depth, -0.05 * dt, 0.05 * dt);
     const want = k.speed * s.pace;
     s.speed += (want - s.speed) * (1 - Math.exp(-dt / (want > s.speed ? 0.3 : 1)));
     const ease = s.speed * dt / (tightest * Math.max(k.length * 0.15, tightest * 0.3));
@@ -2154,12 +2156,14 @@ function mountPanel(host, settings, change, inView) {
             <button type="button" class="icon" data-step="1" aria-label="Pr\xF3ximo animal (\u2192)" title="Pr\xF3ximo (\u2192)">${ICONS.next}</button>
           </div>
         </div>
+        <div class="block pair"><span>Profundidade</span>${seg("level", "Profundidade", [["1", "Raso"], ["2", "Meio"], ["3", "Fundo"]])}</div>
         <div class="cards block">${ORDER.map((n) => `<button type="button" class="card" data-watch="${n}" title="${LABELS[n][1]}">${dot(n)}<span class="name">${LABELS[n][0]}</span><span class="size">${sizeOf(n)}</span></button>`).join("")}</div>
       </div>
 
       <div class="shared">
         <div class="section">Visualiza\xE7\xE3o</div>
         <div class="block pair"><span>Estilo</span>${seg("style", "Estilo", [["mosaic", "Mosaico"], ["smooth", "Liso"]])}</div>
+        <div class="block pair"><span>Superf\xEDcie</span>${seg("surface", "Superf\xEDcie", [["on", "Com luz"], ["off", "Sem"]])}</div>
         <div class="block">
           <div class="label"><label for="zoomOut">Dist\xE2ncia</label><span class="hint" data-value="zoomOut"></span></div>
           <input id="zoomOut" type="range" min="0.6" max="3" step="0.1">
@@ -2227,6 +2231,8 @@ function mountPanel(host, settings, change, inView) {
     theme.setAttribute("aria-label", toLight ? "Tema claro" : "Tema escuro");
     theme.title = toLight ? "Tema claro" : "Tema escuro";
     for (const b of $$("[data-style]")) b.setAttribute("aria-pressed", String(b.dataset.style === settings.style));
+    for (const b of $$("[data-level]")) b.setAttribute("aria-pressed", String(Number(b.dataset.level) === settings.level));
+    for (const b of $$("[data-surface]")) b.setAttribute("aria-pressed", String(b.dataset.surface === "on" === settings.surface));
     for (const b of $$("[data-watch]")) b.setAttribute("aria-pressed", String(b.dataset.watch === settings.observe));
     if (settings.observe !== null) {
       $("[data-who]").textContent = LABELS[settings.observe][1];
@@ -2252,6 +2258,8 @@ function mountPanel(host, settings, change, inView) {
     else if (d.speed !== void 0) set({ speed: Number(d.speed) });
     else if (b.hasAttribute("data-theme-toggle")) set({ theme: settings.theme === "dark" ? "light" : "dark" });
     else if (d.style !== void 0) set({ style: d.style });
+    else if (d.level !== void 0) set({ level: Number(d.level) });
+    else if (d.surface !== void 0) set({ surface: d.surface === "on" });
     else if (b.hasAttribute("data-pause")) set({ paused: !settings.paused });
     else if (b.hasAttribute("data-less")) set({ atOnce: Math.max(1, settings.atOnce - 1) });
     else if (b.hasAttribute("data-more")) set({ atOnce: Math.min(8, settings.atOnce + 1) });
@@ -2293,10 +2301,18 @@ function mountPanel(host, settings, change, inView) {
 
 // src/index.ts
 var LIGHT = "#dde6e9";
-var DEEP_DARK = "#16202a";
-var DEEP_LIGHT = "#a9c2cc";
-var FADE = 0.6;
+var DEEP_DARK = "#171d24";
+var DEEP_LIGHT = "#c9d8de";
+var FADE = 0.8;
 var BLUR = 7;
+var TINT = 0.3;
+var CLEAR = 0.85;
+var CAUSTIC_DAY = 0.26;
+var CAUSTIC_NIGHT = 0.12;
+var NETS = [
+  [1, 9, 4],
+  [1.37, -6, 7]
+];
 var SAVED = "shark-night:settings";
 var GLYPHS = "$%tSX8@:;#S%X8tS";
 var SHADES = [1, 0.886, 0.776, 0.659];
@@ -2325,6 +2341,33 @@ function tileTable() {
   }
   return { shade, glyph };
 }
+function causticNet() {
+  const n = 128;
+  const rand = rng(5);
+  const seeds = Array.from({ length: 10 }, () => [rand() * n, rand() * n]);
+  const img = new ImageData(n, n);
+  for (let y = 0; y < n; y += 1) {
+    for (let x = 0; x < n; x += 1) {
+      const wx = x + 5 * Math.sin(4 * Math.PI * y / n) + 3 * Math.sin(6 * Math.PI * (x + y) / n);
+      const wy = y + 5 * Math.sin(4 * Math.PI * x / n) + 3 * Math.sin(6 * Math.PI * (x - y) / n);
+      let d1 = Infinity;
+      let d2 = Infinity;
+      for (const [sx, sy] of seeds) {
+        for (let ox = -n; ox <= n; ox += n) {
+          for (let oy = -n; oy <= n; oy += n) {
+            const d = Math.hypot(wx - sx - ox, wy - sy - oy);
+            if (d < d1) [d1, d2] = [d, d1];
+            else if (d < d2) d2 = d;
+          }
+        }
+      }
+      const i = (y * n + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = Math.max(0, 1 - (d2 - d1) / 10) ** 3 * 255;
+    }
+  }
+  return img;
+}
 function mountSharkNight(host, options = {}) {
   const settings = {
     theme: options.theme ?? "dark",
@@ -2335,7 +2378,9 @@ function mountSharkNight(host, options = {}) {
     species: options.species ?? KINDS.map((k) => k.name),
     speed: options.speed ?? 1,
     paused: false,
-    observe: null
+    observe: null,
+    level: 1,
+    surface: options.surface ?? true
   };
   if (options.controls === true) {
     try {
@@ -2349,6 +2394,8 @@ function mountSharkNight(host, options = {}) {
     settings.cell = number(settings.cell, 6, 20, 10);
     settings.atOnce = number(settings.atOnce, 1, 8, 4);
     settings.speed = [0.5, 1, 2].includes(settings.speed) ? settings.speed : 1;
+    settings.surface = settings.surface !== false;
+    settings.level = [1, 2, 3].includes(settings.level) ? settings.level : 1;
     settings.species = Array.isArray(settings.species) ? KINDS.map((k) => k.name).filter((n) => settings.species.includes(n)) : KINDS.map((k) => k.name);
     settings.observe = null;
   }
@@ -2367,6 +2414,9 @@ function mountSharkNight(host, options = {}) {
   const layer = document.createElement("canvas");
   const lowLayer = document.createElement("canvas");
   const lowLayerCtx = lowLayer.getContext("2d", { willReadFrequently: true });
+  const net = causticNet();
+  const nets = /* @__PURE__ */ new Map();
+  let clock = 0;
   let sea;
   let scale = 1;
   let cols = 0;
@@ -2432,7 +2482,9 @@ function mountSharkNight(host, options = {}) {
       const world = Math.max(framing(k, 3) * 4, 4e3);
       setWidth(world);
       const own = createSea(Math.round(world * canvas.height / canvas.width));
-      const focus = focusOf(place(own, kind));
+      const a = place(own, kind);
+      a.depth = a.dive = depthOf(settings.level);
+      const focus = focusOf(a);
       watch = { sea: own, kind: k, view: framing(k, settings.zoomOut), x: focus.x, y: focus.y };
     }
     water();
@@ -2460,6 +2512,30 @@ function mountSharkNight(host, options = {}) {
           const x = ((gx + rand()) * g - v.left) * v.s;
           const y = ((gy + rand()) * g - v.top) * v.s;
           ctx.fillRect(x, y, 3 * dpr, 1.2 * dpr);
+        }
+      }
+    }
+  }
+  function glints(v) {
+    const g = 90;
+    const size = settings.cell * scale;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const right = v.left + canvas.width / v.s;
+    const bottom = v.top + canvas.height / v.s;
+    for (let gx = Math.floor(v.left / g); gx * g < right; gx += 1) {
+      for (let gy = Math.floor(v.top / g); gy * g < bottom; gy += 1) {
+        const rand = rng(Math.imul(gx, 83492791) ^ Math.imul(gy, 2654435761));
+        const spark = Math.sin(clock * (0.8 + rand() * 1.2) + rand() * 7);
+        if (spark < 0.97) continue;
+        const x = ((gx + rand()) * g - v.left) * v.s;
+        const y = ((gy + rand()) * g - v.top) * v.s;
+        const glow = (spark - 0.97) / 0.03;
+        if (settings.style === "mosaic") {
+          ctx.fillStyle = `rgba(214,226,236,${0.35 * glow})`;
+          ctx.fillRect(Math.floor(x / size) * size, Math.floor(y / size) * size, size, size);
+        } else {
+          ctx.fillStyle = `rgba(214,226,236,${0.7 * glow})`;
+          ctx.fillRect(x - 5 * v.s, y - 0.8 * v.s, 10 * v.s, 1.6 * v.s);
         }
       }
     }
@@ -2507,24 +2583,53 @@ function mountSharkNight(host, options = {}) {
     if (c.canvas.width !== width || c.canvas.height !== height) {
       c.canvas.width = width;
       c.canvas.height = height;
-    } else {
-      c.setTransform(1, 0, 0, 1, 0, 0);
-      c.clearRect(0, 0, width, height);
     }
+    const k = KINDS[a.kind];
+    const discs = discsOf(a);
+    const pad = (k.reach + 20) * s + blur * 2 + 2;
+    const x0 = Math.max(0, Math.floor(Math.min(...discs.map((d) => (d.x - d.r - left) * s)) - pad));
+    const y0 = Math.max(0, Math.floor(Math.min(...discs.map((d) => (d.y - d.r - top) * s)) - pad));
+    const x1 = Math.min(width, Math.ceil(Math.max(...discs.map((d) => (d.x + d.r - left) * s)) + pad));
+    const y1 = Math.min(height, Math.ceil(Math.max(...discs.map((d) => (d.y + d.r - top) * s)) + pad));
+    if (x1 <= x0 || y1 <= y0) return void 0;
+    const [w, h] = [x1 - x0, y1 - y0];
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.clearRect(x0, y0, w, h);
     c.setTransform(s, 0, 0, s, -left * s, -top * s);
+    c.imageSmoothingEnabled = tile === 0;
     c.lineJoin = "round";
-    DRAW[KINDS[a.kind].plan](c, a, tile);
+    DRAW[k.plan](c, a, tile);
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.globalCompositeOperation = "source-atop";
-    c.globalAlpha = a.depth * FADE;
+    c.globalAlpha = a.depth * (tile > 0 ? TINT : FADE);
     c.fillStyle = settings.theme === "light" ? DEEP_LIGHT : DEEP_DARK;
-    c.fillRect(0, 0, width, height);
+    c.fillRect(x0, y0, w, h);
+    if (settings.surface) {
+      const coarse = tile > 0 ? 2.5 : 1;
+      c.globalAlpha = (1 - a.depth) ** 1.5 * (settings.theme === "light" ? CAUSTIC_DAY : CAUSTIC_NIGHT);
+      let pattern = nets.get(c);
+      if (pattern === void 0) {
+        const source = document.createElement("canvas");
+        source.width = net.width;
+        source.height = net.height;
+        source.getContext("2d", { willReadFrequently: c === lowLayerCtx }).putImageData(net, 0, 0);
+        pattern = c.createPattern(source, "repeat");
+        nets.set(c, pattern);
+      }
+      for (const [u, dx, dy] of NETS) {
+        const q = u * coarse * s;
+        pattern.setTransform(new DOMMatrix([q, 0, 0, q, (dx * clock - left) * s, (dy * clock - top) * s]));
+        c.fillStyle = pattern;
+        c.fillRect(x0, y0, w, h);
+      }
+    }
     c.globalAlpha = 1;
     c.globalCompositeOperation = "source-over";
     onto.setTransform(1, 0, 0, 1, 0, 0);
     if (blur >= 0.5) onto.filter = `blur(${blur.toFixed(1)}px)`;
-    onto.drawImage(c.canvas, 0, 0);
+    onto.drawImage(c.canvas, x0, y0, w, h, x0, y0, w, h);
     onto.filter = "none";
+    return [x0, y0, w, h];
   }
   function paint() {
     const cell = settings.cell;
@@ -2536,12 +2641,20 @@ function mountSharkNight(host, options = {}) {
     if (settings.style === "smooth") {
       const c = layer.getContext("2d");
       for (const a of animals) lay(ctx, c, a, 0, v.s, v.left, v.top, Math.max(0, a.depth - 0.25) * BLUR * v.s);
+      if (settings.surface && settings.theme === "dark") glints(v);
       return;
     }
     const tu = cell * scale / v.s;
     lctx.setTransform(1, 0, 0, 1, 0, 0);
     lctx.clearRect(0, 0, cols, rows);
-    for (const a of animals) lay(lctx, lowLayerCtx, a, tu, 1 / tu, v.left, v.top, 0);
+    const deep = new Float32Array(cols * rows);
+    for (const a of animals) {
+      const box = lay(lctx, lowLayerCtx, a, tu, 1 / tu, v.left, v.top, 0);
+      if (box === void 0) continue;
+      const [x0, y0, w, h] = box;
+      const body = lowLayerCtx.getImageData(x0, y0, w, h).data;
+      for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) if (body[(y * w + x) * 4 + 3] >= 128) deep[(y0 + y) * cols + x0 + x] = a.depth;
+    }
     const px = lctx.getImageData(0, 0, cols, rows).data;
     const size = cell * scale;
     const light = settings.theme === "light";
@@ -2558,6 +2671,7 @@ function mountSharkNight(host, options = {}) {
         const [cr, cg, cb] = [px[i], px[i + 1], px[i + 2]];
         const x = c * size;
         const y = r * size;
+        ctx.globalAlpha = 1 - deep[r * cols + c] * CLEAR;
         ctx.fillStyle = `rgb(${cr * shade},${cg * shade},${cb * shade})`;
         ctx.fillRect(x + inset, y + inset, size - 2 * inset, size - 2 * inset);
         const g = tiles.glyph[tile];
@@ -2567,6 +2681,8 @@ function mountSharkNight(host, options = {}) {
         }
       }
     }
+    ctx.globalAlpha = 1;
+    if (settings.surface && settings.theme === "dark") glints(v);
   }
   layout();
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -2584,12 +2700,14 @@ function mountSharkNight(host, options = {}) {
         stepSea(watch.sea, STEP3, MARGIN);
         const a = watch.sea.animals[0];
         if (a !== void 0) {
+          a.dive = depthOf(settings.level);
           const f = focusOf(a);
           watch.x += (f.x - watch.x) * 0.04;
           watch.y += (f.y - watch.y) * 0.04;
         }
       }
       owed -= STEP3;
+      clock += STEP3;
       stepped = true;
     }
     if (stepped) paint();

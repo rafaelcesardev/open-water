@@ -25,6 +25,10 @@ export type Settings = {
   paused: boolean
   /** One animal watched alone, kept in the middle of the view; null for the open sea. */
   observe: Kind['name'] | null
+  /** The level the watched animal swims at: 1 under the surface, 2 midwater, 3 deep. */
+  level: 1 | 2 | 3
+  /** Light from the surface: caustics, and the moon glinting at night. */
+  surface: boolean
 }
 
 type Name = Kind['name']
@@ -286,12 +290,14 @@ export function mountPanel(
             <button type="button" class="icon" data-step="1" aria-label="Próximo animal (→)" title="Próximo (→)">${ICONS.next}</button>
           </div>
         </div>
+        <div class="block pair"><span>Profundidade</span>${seg('level', 'Profundidade', [['1', 'Raso'], ['2', 'Meio'], ['3', 'Fundo']])}</div>
         <div class="cards block">${ORDER.map(n => `<button type="button" class="card" data-watch="${n}" title="${LABELS[n][1]}">${dot(n)}<span class="name">${LABELS[n][0]}</span><span class="size">${sizeOf(n)}</span></button>`).join('')}</div>
       </div>
 
       <div class="shared">
         <div class="section">Visualização</div>
         <div class="block pair"><span>Estilo</span>${seg('style', 'Estilo', [['mosaic', 'Mosaico'], ['smooth', 'Liso']])}</div>
+        <div class="block pair"><span>Superfície</span>${seg('surface', 'Superfície', [['on', 'Com luz'], ['off', 'Sem']])}</div>
         <div class="block">
           <div class="label"><label for="zoomOut">Distância</label><span class="hint" data-value="zoomOut"></span></div>
           <input id="zoomOut" type="range" min="0.6" max="3" step="0.1">
@@ -373,6 +379,8 @@ export function mountPanel(
     theme.setAttribute('aria-label', toLight ? 'Tema claro' : 'Tema escuro')
     theme.title = toLight ? 'Tema claro' : 'Tema escuro'
     for (const b of $$<HTMLButtonElement>('[data-style]')) b.setAttribute('aria-pressed', String(b.dataset.style === settings.style))
+    for (const b of $$<HTMLButtonElement>('[data-level]')) b.setAttribute('aria-pressed', String(Number(b.dataset.level) === settings.level))
+    for (const b of $$<HTMLButtonElement>('[data-surface]')) b.setAttribute('aria-pressed', String((b.dataset.surface === 'on') === settings.surface))
     for (const b of $$<HTMLButtonElement>('[data-watch]')) b.setAttribute('aria-pressed', String(b.dataset.watch === settings.observe))
     if (settings.observe !== null) {
       $<HTMLElement>('[data-who]').textContent = LABELS[settings.observe][1]
@@ -400,6 +408,8 @@ export function mountPanel(
     else if (d.speed !== undefined) set({ speed: Number(d.speed) })
     else if (b.hasAttribute('data-theme-toggle')) set({ theme: settings.theme === 'dark' ? 'light' : 'dark' })
     else if (d.style !== undefined) set({ style: d.style as Settings['style'] })
+    else if (d.level !== undefined) set({ level: Number(d.level) as Settings['level'] })
+    else if (d.surface !== undefined) set({ surface: d.surface === 'on' })
     else if (b.hasAttribute('data-pause')) set({ paused: !settings.paused })
     else if (b.hasAttribute('data-less')) set({ atOnce: Math.max(1, settings.atOnce - 1) })
     else if (b.hasAttribute('data-more')) set({ atOnce: Math.min(8, settings.atOnce + 1) })
