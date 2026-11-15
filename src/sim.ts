@@ -560,9 +560,10 @@ export function stepSea(sea: Sea, dt: number, tile: number, random: () => number
     }
 
     // Up and down, slowly: now and then it makes for another of the levels its kind keeps to; a hunter, its prey's.
+    // Five seconds from one level to the next.
     if (random() < 0.04 * dt) s.dive = deepIn(k, random)
     if (s.mode === 'chase' && s.prey !== undefined) s.dive = s.prey.depth
-    s.depth += clamp(s.dive - s.depth, -0.05 * dt, 0.05 * dt)
+    s.depth += clamp(s.dive - s.depth, -0.1 * dt, 0.1 * dt)
 
     // The pace is taken up fast and let go slowly, as an animal kicks and then coasts.
     const want = k.speed * s.pace

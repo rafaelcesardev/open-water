@@ -455,7 +455,7 @@ function stepSea(sea, dt, tile, random = Math.random) {
     }
     if (random() < 0.04 * dt) s.dive = deepIn(k, random);
     if (s.mode === "chase" && s.prey !== void 0) s.dive = s.prey.depth;
-    s.depth += clamp(s.dive - s.depth, -0.05 * dt, 0.05 * dt);
+    s.depth += clamp(s.dive - s.depth, -0.1 * dt, 0.1 * dt);
     const want = k.speed * s.pace;
     s.speed += (want - s.speed) * (1 - Math.exp(-dt / (want > s.speed ? 0.3 : 1)));
     const ease = s.speed * dt / (tightest * Math.max(k.length * 0.15, tightest * 0.3));
