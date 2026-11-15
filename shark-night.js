@@ -5,9 +5,9 @@ function stepSchool(s, animals, dt, random) {
   const fish = s.fish;
   if (fish.length === 0) return;
   const bl = k.length;
-  const near2 = bl * 1.6;
-  const along = bl * 5;
-  const around = bl * 7;
+  const near2 = bl * 1.1;
+  const along = bl * 3.5;
+  const around = bl * 5;
   const cx = fish.reduce((t, f) => t + f.x, 0) / fish.length;
   const cy = fish.reduce((t, f) => t + f.y, 0) / fish.length;
   const threats = [];
@@ -15,10 +15,10 @@ function stepSchool(s, animals, dt, random) {
     if (o === s || KINDS[o.kind].plan === "school") continue;
     const ko = KINDS[o.kind];
     if (Math.hypot(o.x - cx, o.y - cy) > ko.length * 1.3 + 500) continue;
-    for (const c of discsOf(o)) threats.push({ x: c.x, y: c.y, r: c.r + bl * 3 });
-    threats.push({ x: o.x + Math.cos(o.heading) * o.speed * 0.5, y: o.y + Math.sin(o.heading) * o.speed * 0.5, r: ko.reach * 0.7 + bl * 4 });
+    for (const c of discsOf(o)) threats.push({ x: c.x, y: c.y, r: c.r + bl * 1.5 });
+    threats.push({ x: o.x + Math.cos(o.heading) * o.speed * 0.5, y: o.y + Math.sin(o.heading) * o.speed * 0.5, r: ko.reach * 0.7 + bl * 2 });
   }
-  if (Math.hypot(s.x - cx, s.y - cy) > 140) {
+  if (Math.hypot(s.x - cx, s.y - cy) > bl * 5) {
     s.pace = Math.min(s.pace, 0.6);
     s.paceFor = 0.3;
   }
@@ -69,7 +69,7 @@ function stepSchool(s, animals, dt, random) {
     const lx = s.x - f.x;
     const ly = s.y - f.y;
     const l = Math.hypot(lx, ly) || 1;
-    const stray = Math.min(1.6, Math.max(0, (l - 90) / 160));
+    const stray = Math.min(1.6, Math.max(0, (l - bl * 3) / (bl * 5)));
     wx += Math.cos(s.heading) * 0.45 + lx / l * stray;
     wy += Math.sin(s.heading) * 0.45 + ly / l * stray;
     let fear = 0;
@@ -89,8 +89,7 @@ function stepSchool(s, animals, dt, random) {
     if (d > Math.PI) d -= Math.PI * 2;
     if (d < -Math.PI) d += Math.PI * 2;
     const turn = Math.max(-TURN * dt, Math.min(TURN * dt, d));
-    const ahead = (f.x - s.x) * Math.cos(s.heading) + (f.y - s.y) * Math.sin(s.heading);
-    const target = cruise * (1 + fear * (k.sprint - 1)) * (1 - Math.max(-0.35, Math.min(0.25, ahead / 400))) * (0.95 + random() * 0.1);
+    const target = cruise * (1 + fear * (k.sprint - 1)) * (0.95 + random() * 0.1);
     const was = Math.hypot(f.vx, f.vy);
     const speed = was + (target - was) * Math.min(1, dt * (target > was ? 6 : 1.5));
     const h = heading + turn;
@@ -109,18 +108,18 @@ var KINDS = [
   // Great white, 4.5 m: heavy and spindle-shaped, a rounded conical snout, long sickle pectorals.
   { ...shark, name: "white", length: 4.5 * M, girth: 40, widest: 0.33, snout: 0.62, fin: 83, reach: 125, speed: 62, beat: 2.6, turn: 0.6, sprint: 2.3, prey: ["blacktip", "dolphin", "turtle"] },
   // Great hammerhead, 4 m: the cephalofoil on a body already thick right behind it, short pectorals.
-  { ...shark, name: "hammer", length: 4 * M, girth: 24, widest: 0.34, snout: 0.5, fin: 44, reach: 80, speed: 86, beat: 2, turn: 0.6, sprint: 2.3, hammer: true, prey: ["blacktip"] },
+  { ...shark, name: "hammer", length: 4 * M, girth: 24, widest: 0.34, snout: 0.5, fin: 44, reach: 80, speed: 86, beat: 2, turn: 0.6, sprint: 2.3, hammer: true, prey: ["blacktip", "jacks"] },
   // Tiger, 3.8 m: a broad blunt head, almost square from above, dark bars across the back. The turtles' hunter.
-  { ...shark, name: "tiger", length: 3.8 * M, girth: 27, widest: 0.3, snout: 0.5, fin: 53, reach: 85, speed: 74, beat: 2.2, turn: 0.6, sprint: 2.3, prey: ["turtle", "blacktip"] },
+  { ...shark, name: "tiger", length: 3.8 * M, girth: 27, widest: 0.3, snout: 0.5, fin: 53, reach: 85, speed: 74, beat: 2.2, turn: 0.6, sprint: 2.3, prey: ["turtle", "blacktip", "jacks"] },
   // Blacktip, 1.6 m: slender and quick, a rounded snout, black-tipped fins.
-  { ...shark, name: "blacktip", length: 1.6 * M, girth: 10, widest: 0.32, snout: 0.6, fin: 23, reach: 36, speed: 100, beat: 0.9, turn: 0.6, sprint: 2.3, whim: 1.3, prey: ["sardines"] },
+  { ...shark, name: "blacktip", length: 1.6 * M, girth: 10, widest: 0.32, snout: 0.6, fin: 23, reach: 36, speed: 100, beat: 0.9, turn: 0.6, sprint: 2.3, whim: 1.3, prey: [] },
   // Blue whale, 24 m: long and slender, a broad flat U-shaped head, a small fin far back, flukes a quarter its
   // length across. It barely turns; it passes through.
   { ...cetacean, name: "blue", length: 24 * M, girth: 0.07 * 24 * M, profile: [[0, 0.45], [0.05, 0.78], [0.15, 0.93], [0.35, 1], [0.6, 0.82], [0.8, 0.42], [0.9, 0.18]], reach: 330, speed: 128, beat: 6, turn: 0.8, sprint: 1.4, whim: 0.2, stay: [4, 14], prey: [] },
   // Orca, 7 m: robust, a blunt rounded head, broad paddle flippers.
   { ...cetacean, name: "orca", length: 7 * M, girth: 0.09 * 7 * M, profile: [[0, 0.4], [0.06, 0.8], [0.25, 1], [0.5, 0.9], [0.75, 0.45], [0.9, 0.17]], reach: 135, speed: 120, beat: 1.6, turn: 0.45, sprint: 2.5, whim: 1.2, prey: ["white", "tiger", "hammer", "blacktip", "dolphin", "manta"] },
   // Bottlenose dolphin, 2.7 m: a short beak before the melon, small pointed flippers. Quick and restless.
-  { ...cetacean, name: "dolphin", length: 2.7 * M, girth: 0.093 * 2.7 * M, profile: [[0, 0.1], [0.05, 0.28], [0.09, 0.6], [0.3, 1], [0.55, 0.85], [0.78, 0.38], [0.9, 0.15]], reach: 50, speed: 140, beat: 0.8, turn: 0.3, sprint: 2.5, whim: 2.5, prey: ["sardines"] },
+  { ...cetacean, name: "dolphin", length: 2.7 * M, girth: 0.093 * 2.7 * M, profile: [[0, 0.1], [0.05, 0.28], [0.09, 0.6], [0.3, 1], [0.55, 0.85], [0.78, 0.38], [0.9, 0.15]], reach: 50, speed: 140, beat: 0.8, turn: 0.3, sprint: 2.5, whim: 2.5, prey: ["jacks"] },
   // Green sea turtle, 1.2 m: an oval shell, a small head, long front flippers it flies with, stroke and glide.
   { name: "turtle", plan: "turtle", length: 1.2 * M, girth: 32, widest: 0, snout: 0, fin: 0, profile: [[0, 0.25], [0.1, 0.32], [0.17, 0.8], [0.42, 1], [0.7, 0.75], [0.88, 0.3], [1, 0.05]], reach: 64, speed: 48, beat: 2.4, turn: 0.5, trunk: 1, sway: 0, surge: 0.35, sprint: 3, whim: 0.8, stay: [30, 80], prey: [] },
   // Oceanic manta, 5.5 m across: a wide rigid disc, the horn-like cephalic fins in front, a short whip tail. Its
@@ -129,8 +128,9 @@ var KINDS = [
   // Giant squid, 8 m with its feeding tentacles: a 2 m mantle with small fins at its tip, huge eyes, eight arms
   // trailing and the two long tentacles beyond. It jets mantle first, in pulses.
   { name: "squid", plan: "squid", length: 8 * M, girth: 22, widest: 0, snout: 0, fin: 0, profile: [[0, 0.35], [0.03, 1.1], [0.07, 0.8], [0.15, 1], [0.25, 0.9], [0.3, 1.05], [0.36, 0.85], [0.45, 1], [0.52, 0.5], [0.6, 0.18], [1, 0.12]], reach: 42, speed: 40, beat: 2.5, turn: 0.3, trunk: 1, sway: 0.03, surge: 0.6, sprint: 2.5, whim: 0.5, stay: [25, 60], prey: [] },
-  // A school of sardines, 22 cm each: they keep together and go one way; it parts round anything big and closes again.
-  { name: "sardines", plan: "school", length: 0.22 * M, girth: 2, widest: 0, snout: 0, fin: 0, reach: 170, speed: 60, beat: 0.35, turn: 9, trunk: 1, sway: 0.12, surge: 0, sprint: 3, whim: 1, stay: [30, 70], prey: [] }
+  // A school of bigeye trevally, 60 cm each, the silver school of every drone shot from above: they keep together and
+  // go one way; it parts round anything big and closes again.
+  { name: "jacks", plan: "school", length: 0.6 * M, girth: 4, widest: 0, snout: 0, fin: 0, reach: 260, speed: 55, beat: 0.5, turn: 3.5, trunk: 1, sway: 0.1, surge: 0, sprint: 3, whim: 1, stay: [30, 70], prey: [] }
 ];
 var WIDTH = 1600;
 function setWidth(width) {
@@ -245,9 +245,9 @@ function arrive(sea, random) {
     for (let back = STEP; back <= k.length * 1.25; back += STEP) trail.push({ x: x - Math.cos(heading) * back, y: y - Math.sin(heading) * back });
     const a = { kind, x, y, heading, curve: 0, speed: k.speed, pace: 1, paceFor: 0, tight: 0, way: 0, wayFrom: 0, mode: "enter", modeFor: 0, prey: void 0, rest: 8 + random() * 12, to, stay: k.stay[0] + random() * (k.stay[1] - k.stay[0]), age: 0, seen: false, swum: random() * 500, trail, fish: [] };
     if (k.plan === "school") {
-      for (let i = 0; i < 140; i += 1) {
-        const back = Math.sqrt(random()) * 260;
-        const side = (random() - 0.5) * 220;
+      for (let i = 0; i < 160; i += 1) {
+        const back = Math.sqrt(random()) * 380;
+        const side = (random() - 0.5) * 320;
         a.fish.push({ x: x - Math.cos(heading) * back - Math.sin(heading) * side, y: y - Math.sin(heading) * back + Math.cos(heading) * side, vx: Math.cos(heading) * k.speed, vy: Math.sin(heading) * k.speed, swum: random() * 50, turn: 0 });
       }
     }
@@ -1110,46 +1110,59 @@ function drawRay(ctx, a, tile) {
 }
 
 // src/draw/school.ts
-var BACK = "#2f4b5b";
-var FLANK2 = "#8fa3ad";
-var FLASH = "#d3dce0";
-var DISTANT = "#5f7f8f";
+var BACK = "#46545d";
+var FLANK2 = "#a3afb5";
+var FLASH = "#dde4e7";
+var DISTANT = "#7f939d";
 function drawSchool(ctx, a, tile) {
   const k = KINDS[a.kind];
   const L2 = k.length;
-  if (tile > 0) {
-    for (const f of a.fish) {
-      ctx.fillStyle = Math.abs(f.turn) > 2.5 ? FLASH : DISTANT;
-      ctx.fillRect(Math.floor(f.x / tile) * tile, Math.floor(f.y / tile) * tile, tile, tile);
-    }
-    return;
-  }
   for (const f of a.fish) {
     const speed = Math.hypot(f.vx, f.vy) || 1;
     const fx = f.vx / speed;
     const fy = f.vy / speed;
     const p = (along, out) => [f.x + fx * along - fy * out, f.y + fy * along + fx * out];
-    const sway = Math.sin(2 * Math.PI * f.swum / (k.speed * k.beat)) * L2 * 0.09;
-    const w = L2 * 0.085;
+    const flash = Math.abs(f.turn) > 1.8;
+    if (tile > 0) {
+      ctx.strokeStyle = flash ? FLASH : DISTANT;
+      ctx.lineWidth = tile;
+      ctx.lineCap = "butt";
+      ctx.beginPath();
+      ctx.moveTo(...p(L2 * 0.45, 0));
+      ctx.lineTo(...p(-L2 * 0.35, 0));
+      ctx.stroke();
+      continue;
+    }
+    const sway = Math.sin(2 * Math.PI * f.swum / (k.speed * k.beat)) * L2 * 0.07;
+    const w = L2 * 0.075;
+    const tail = L2 * 0.16;
     ctx.beginPath();
     ctx.moveTo(...p(L2 * 0.5, 0));
-    ctx.quadraticCurveTo(...p(L2 * 0.32, w * 1.05), ...p(L2 * 0.05, w));
-    ctx.quadraticCurveTo(...p(-L2 * 0.22, w * 0.7), ...p(-L2 * 0.34, sway * 0.5 + w * 0.22));
-    ctx.lineTo(...p(-L2 * 0.5, sway + w * 0.95));
-    ctx.lineTo(...p(-L2 * 0.42, sway));
-    ctx.lineTo(...p(-L2 * 0.5, sway - w * 0.95));
-    ctx.lineTo(...p(-L2 * 0.34, sway * 0.5 - w * 0.22));
-    ctx.quadraticCurveTo(...p(-L2 * 0.22, -w * 0.7), ...p(L2 * 0.05, -w));
-    ctx.quadraticCurveTo(...p(L2 * 0.32, -w * 1.05), ...p(L2 * 0.5, 0));
+    ctx.quadraticCurveTo(...p(L2 * 0.44, w * 0.9), ...p(L2 * 0.25, w));
+    ctx.quadraticCurveTo(...p(-L2 * 0.1, w * 0.95), ...p(-L2 * 0.3, sway * 0.4 + w * 0.2));
+    ctx.lineTo(...p(-L2 * 0.36, sway * 0.7 + w * 0.12));
+    ctx.quadraticCurveTo(...p(-L2 * 0.42, sway + tail * 0.5), ...p(-L2 * 0.52, sway + tail));
+    ctx.quadraticCurveTo(...p(-L2 * 0.44, sway + tail * 0.3), ...p(-L2 * 0.43, sway));
+    ctx.quadraticCurveTo(...p(-L2 * 0.44, sway - tail * 0.3), ...p(-L2 * 0.52, sway - tail));
+    ctx.quadraticCurveTo(...p(-L2 * 0.42, sway - tail * 0.5), ...p(-L2 * 0.36, sway * 0.7 - w * 0.12));
+    ctx.lineTo(...p(-L2 * 0.3, sway * 0.4 - w * 0.2));
+    ctx.quadraticCurveTo(...p(-L2 * 0.1, -w * 0.95), ...p(L2 * 0.25, -w));
+    ctx.quadraticCurveTo(...p(L2 * 0.44, -w * 0.9), ...p(L2 * 0.5, 0));
     ctx.closePath();
-    const roll = Math.min(1, Math.abs(f.turn) / 3);
-    ctx.fillStyle = roll > 0.6 ? FLASH : FLANK2;
+    ctx.fillStyle = flash ? FLASH : FLANK2;
     ctx.fill();
-    if (roll <= 0.6) {
+    ctx.beginPath();
+    for (const side of [-1, 1]) {
+      ctx.moveTo(...p(L2 * 0.22, side * w * 0.9));
+      ctx.quadraticCurveTo(...p(L2 * 0.12, side * w * 2), ...p(L2 * 0.02, side * w * 2.1));
+      ctx.quadraticCurveTo(...p(L2 * 0.1, side * w * 1.2), ...p(L2 * 0.14, side * w * 0.9));
+    }
+    ctx.fill();
+    if (!flash) {
       ctx.beginPath();
-      ctx.moveTo(...p(L2 * 0.46, 0));
-      ctx.quadraticCurveTo(...p(L2 * 0.2, w * 0.6), ...p(-L2 * 0.3, sway * 0.4));
-      ctx.quadraticCurveTo(...p(L2 * 0.2, -w * 0.6), ...p(L2 * 0.46, 0));
+      ctx.moveTo(...p(L2 * 0.47, 0));
+      ctx.quadraticCurveTo(...p(L2 * 0.2, w * 0.62), ...p(-L2 * 0.33, sway * 0.6));
+      ctx.quadraticCurveTo(...p(L2 * 0.2, -w * 0.62), ...p(L2 * 0.47, 0));
       ctx.fillStyle = BACK;
       ctx.fill();
     }

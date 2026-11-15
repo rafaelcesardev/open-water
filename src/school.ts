@@ -14,9 +14,10 @@ export function stepSchool(s: Animal, animals: Animal[], dt: number, random: () 
   const fish = s.fish
   if (fish.length === 0) return
   const bl = k.length
-  const near = bl * 1.6
-  const along = bl * 5
-  const around = bl * 7
+  // Real schools pack close: about a body length between neighbours.
+  const near = bl * 1.1
+  const along = bl * 3.5
+  const around = bl * 5
 
   // The bodies close enough to matter, each as discs, and where each head will be in a moment.
   const cx = fish.reduce((t, f) => t + f.x, 0) / fish.length
@@ -26,13 +27,13 @@ export function stepSchool(s: Animal, animals: Animal[], dt: number, random: () 
     if (o === s || KINDS[o.kind]!.plan === 'school') continue
     const ko = KINDS[o.kind]!
     if (Math.hypot(o.x - cx, o.y - cy) > ko.length * 1.3 + 500) continue
-    for (const c of discsOf(o)) threats.push({ x: c.x, y: c.y, r: c.r + bl * 3 })
+    for (const c of discsOf(o)) threats.push({ x: c.x, y: c.y, r: c.r + bl * 1.5 })
     // A head coming on is feared from further off than a body passing.
-    threats.push({ x: o.x + Math.cos(o.heading) * o.speed * 0.5, y: o.y + Math.sin(o.heading) * o.speed * 0.5, r: ko.reach * 0.7 + bl * 4 })
+    threats.push({ x: o.x + Math.cos(o.heading) * o.speed * 0.5, y: o.y + Math.sin(o.heading) * o.speed * 0.5, r: ko.reach * 0.7 + bl * 2 })
   }
 
   // The school waits for its fish: a head far ahead of them slows.
-  if (Math.hypot(s.x - cx, s.y - cy) > 140) {
+  if (Math.hypot(s.x - cx, s.y - cy) > bl * 5) {
     s.pace = Math.min(s.pace, 0.6)
     s.paceFor = 0.3
   }
@@ -86,7 +87,7 @@ export function stepSchool(s: Animal, animals: Animal[], dt: number, random: () 
     const lx = s.x - f.x
     const ly = s.y - f.y
     const l = Math.hypot(lx, ly) || 1
-    const stray = Math.min(1.6, Math.max(0, (l - 90) / 160))
+    const stray = Math.min(1.6, Math.max(0, (l - bl * 3) / (bl * 5)))
     wx += Math.cos(s.heading) * 0.45 + (lx / l) * stray
     wy += Math.sin(s.heading) * 0.45 + (ly / l) * stray
     // Fear: straight away from anything big that comes too near, the nearer the harder; and faster.
@@ -102,15 +103,14 @@ export function stepSchool(s: Animal, animals: Animal[], dt: number, random: () 
       fear = Math.max(fear, push)
     }
 
-    // Turn toward that way, no faster than a fish can; speed up when afraid or behind, ease off when ahead.
+    // Turn toward that way, no faster than a fish can; speed up when afraid.
     const heading = Math.atan2(f.vy, f.vx)
     const want = Math.atan2(wy, wx)
     let d = (want - heading) % (Math.PI * 2)
     if (d > Math.PI) d -= Math.PI * 2
     if (d < -Math.PI) d += Math.PI * 2
     const turn = Math.max(-TURN * dt, Math.min(TURN * dt, d))
-    const ahead = (f.x - s.x) * Math.cos(s.heading) + (f.y - s.y) * Math.sin(s.heading)
-    const target = cruise * (1 + fear * (k.sprint - 1)) * (1 - Math.max(-0.35, Math.min(0.25, ahead / 400))) * (0.95 + random() * 0.1)
+    const target = cruise * (1 + fear * (k.sprint - 1)) * (0.95 + random() * 0.1)
     const was = Math.hypot(f.vx, f.vy)
     const speed = was + (target - was) * Math.min(1, dt * (target > was ? 6 : 1.5))
     const h = heading + turn

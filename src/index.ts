@@ -1,5 +1,5 @@
 // Shark Night, live: a dark sea seen from above, on a canvas, and the animals passing through it at their real sizes:
-// sharks, a blue whale, orcas, dolphins, a sea turtle, a manta, a giant squid, a school of sardines.
+// sharks, a blue whale, orcas, dolphins, a sea turtle, a manta, a giant squid, a school of bigeye trevally.
 //
 // The sea is simulated as it runs (sim.ts): each animal decides as it goes, with real randomness, so no two minutes
 // are alike. At most four are in view; each comes in from beyond an edge, stays a while and swims off, and another
