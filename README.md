@@ -1,5 +1,9 @@
 # Open Water
 
+![Animais em mosaico nadando sobre um fundo liso: lula-gigante, tartaruga, golfinho, manta e dois tubarões](assets/open-water.svg)
+
+**Veja ao vivo:** https://rafaelcesardev.github.io/open-water/ · **Tema do Claude:** [instalar](#tema-do-claude)
+
 Um mar escuro visto de cima, ao vivo, e os animais que passam por ele no tamanho real de cada um: tubarões (branco, martelo, tigre e galha-preta), baleia-azul, orca, golfinho, tartaruga-verde, manta, lula-gigante e um cardume de xaréus-olho-grande. Desenhados como um mosaico de ladrilhos com letras, ou com o contorno liso.
 
 - **Ao vivo:** nada é gravado. Cada animal decide na hora, com sorteio de verdade, então nenhum minuto se repete.
@@ -27,7 +31,7 @@ Um painel flutuante à direita, de vidro fosco transparente (os animais aparecem
 - **Mar aberto:** os animais entram e saem. Escolha quantos podem aparecer de uma vez (− 1 a 8 +) e quais espécies podem entrar, em botões agrupados (Tubarões, Mamíferos, Outros), com um ponto verde em quem está na tela agora. Desligar uma espécie, ou diminuir o número, faz os que sobram irem embora nadando, sem sumir de repente.
 - **Observar:** um animal sozinho, para avaliar formato e movimento. Ele continua nadando, virando e acelerando como sempre, mas a câmera o acompanha e o mantém no meio da área livre. Partículas na água passam por ele e mostram o deslocamento. Os cartões mostram o tamanho real de cada um, e as setas ‹ › passam para o próximo animal. Em Profundidade (Raso, Meio, Fundo) se escolhe o nível dele; ao trocar, ele sobe ou desce até lá, devagar.
 
-Valem para os dois modos: mosaico ou liso, luz da superfície ligada ou não, distância (perto ou longe), tamanho do ladrilho do mosaico e velocidade (0,5×, 1×, 2×).
+Valem para os dois modos: mosaico ou liso, luz da superfície ligada ou não, distância (perto ou longe), tamanho do ladrilho do mosaico, grade sobre a água ou água lisa (só no mosaico) e velocidade (0,5×, 1×, 2×).
 
 Atalhos: `Espaço` pausa, `H` esconde o painel, `←` `→` trocam o animal observado, `Esc` volta ao mar aberto.
 
