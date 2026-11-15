@@ -328,6 +328,20 @@ function arrive(sea: Sea, random: () => number): void {
   sea.next = 0.5
 }
 
+/** Moves everything in the sea by (dx, dy): the sea seen from further off or nearer, about its middle. */
+export function shift(sea: Sea, dx: number, dy: number): void {
+  const move = (p: Point): void => {
+    p.x += dx
+    p.y += dy
+  }
+  for (const a of sea.animals) {
+    move(a)
+    move(a.to)
+    a.trail.forEach(move)
+    a.fish.forEach(move)
+  }
+}
+
 /** Moves the sea on by `dt` seconds. */
 export function stepSea(sea: Sea, dt: number, tile: number, random: () => number = Math.random): void {
   const inView = (p: Point, margin: number): boolean => p.x > -margin && p.x < WIDTH + margin && p.y > -margin && p.y < sea.h + margin

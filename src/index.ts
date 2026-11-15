@@ -12,7 +12,7 @@
 
 import { DRAW } from './draw/all'
 import { mountPanel, type Settings } from './panel'
-import { KINDS, WIDTH, createSea, place, setWidth, spineOf, stepSea, type Animal, type Kind, type Point, type Sea } from './sim'
+import { KINDS, WIDTH, createSea, place, setWidth, shift, spineOf, stepSea, type Animal, type Kind, type Point, type Sea } from './sim'
 
 export type Options = {
   /** 'mosaic' (default): the animals as glyph tiles. 'smooth': the drawn animals themselves. */
@@ -129,8 +129,8 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
    * follows it, framed by its size. It swims, turns and bursts as ever; it just never leaves the middle of the view.
    */
   let watch: { sea: Sea; kind: Kind; view: number; x: number; y: number } | undefined
-  /** The distance changed while watching: the open sea is laid out anew on going back to it. */
-  let stale = false
+  /** The open sea's width in units (WIDTH is the watched animal's world while watching). */
+  let seaWidth = 0
   let panel: ReturnType<typeof mountPanel> | undefined
 
   /** The sea's settings that the simulation reads: how many at once, which kinds. */
@@ -147,10 +147,27 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     canvas.height = Math.round(Math.max(1, host.clientHeight) * dpr)
     // The sea spans the window's width; as deep as the window is tall, at that scale.
     scale = canvas.width / WIDTH
+    seaWidth = WIDTH
     sea = createSea(Math.round(canvas.height / scale))
     rules()
     water()
     if (settings.observe !== null) observe(settings.observe)
+  }
+
+  /**
+   * The open sea seen from a new distance, without starting it over: it grows or shrinks about its middle and every
+   * animal stays where it was. Nearer in, one left wholly out of view is gone, as anything that leaves the view is;
+   * further off, the new water at the edges fills as animals come in.
+   */
+  function rezoom(): void {
+    const width = normalWidth()
+    const depth = Math.round((canvas.height * width) / canvas.width)
+    shift(sea, (width - seaWidth) / 2, (depth - sea.h) / 2)
+    seaWidth = width
+    setWidth(width)
+    sea.h = depth
+    scale = canvas.width / width
+    water()
   }
 
   /** Where the camera looks when watching: the middle of the body, or of the school. */
@@ -164,12 +181,12 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
   function observe(name: Kind['name'] | null): void {
     if (name === null) {
       watch = undefined
-      if (stale) {
-        stale = false
-        layout()
+      setWidth(seaWidth)
+      // The distance may have changed while watching.
+      if (seaWidth !== normalWidth()) {
+        rezoom()
         return
       }
-      setWidth(normalWidth())
     } else {
       const kind = KINDS.findIndex(k => k.name === name)
       const k = KINDS[kind]!
@@ -370,12 +387,10 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
   function apply(patch: Partial<Settings>): void {
     if (patch.zoomOut !== undefined) {
       if (watch !== undefined) {
-        // Watching: only the camera moves in or out; the open sea waits for its new layout until it is back.
+        // Watching: only the camera moves in or out; the open sea follows on going back to it.
         watch.view = framing(watch.kind, settings.zoomOut)
-        stale = true
       } else {
-        layout()
-        settle()
+        rezoom()
       }
     }
     if (patch.observe !== undefined) observe(patch.observe)

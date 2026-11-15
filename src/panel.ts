@@ -405,13 +405,8 @@ export function mountPanel(
   })
   shadow.addEventListener('input', e => {
     const input = e.target as HTMLInputElement
-    if (input.id === 'cell') set({ cell: Number(input.value) })
-    // A new distance starts the sea over: only once the slider is let go; meanwhile just the figure follows.
-    if (input.id === 'zoomOut') $<HTMLSpanElement>('[data-value="zoomOut"]').textContent = `${Number(input.value).toFixed(1).replace('.', ',')}×`
-  })
-  shadow.addEventListener('change', e => {
-    const input = e.target as HTMLInputElement
-    if (input.id === 'zoomOut') set({ zoomOut: Number(input.value) })
+    // Both follow the slider as it moves: neither starts the sea over.
+    if (input.id === 'cell' || input.id === 'zoomOut') set({ [input.id]: Number(input.value) })
   })
 
   // Keys anywhere on the page, unless typing in a field or using a control that wants them.

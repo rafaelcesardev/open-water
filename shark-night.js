@@ -270,6 +270,18 @@ function arrive(sea, random) {
   }
   sea.next = 0.5;
 }
+function shift(sea, dx, dy) {
+  const move = (p) => {
+    p.x += dx;
+    p.y += dy;
+  };
+  for (const a of sea.animals) {
+    move(a);
+    move(a.to);
+    a.trail.forEach(move);
+    a.fish.forEach(move);
+  }
+}
 function stepSea(sea, dt, tile, random = Math.random) {
   const inView = (p, margin) => p.x > -margin && p.x < WIDTH + margin && p.y > -margin && p.y < sea.h + margin;
   sea.animals = sea.animals.filter((a) => {
@@ -422,8 +434,8 @@ function stepSea(sea, dt, tile, random = Math.random) {
         s.way = hi < -lo ? 1 : -1;
         s.wayFrom = s.heading;
       }
-      const shift = s.way > 0 ? hi : lo;
-      const swerve = Math.atan2(shift / Math.max(first, 0.8), v);
+      const shift2 = s.way > 0 ? hi : lo;
+      const swerve = Math.atan2(shift2 / Math.max(first, 0.8), v);
       const fair = giant ? 1.4 : 0.8;
       const off = turnTo(s.wayFrom, s.heading) * s.way;
       s.curve = off > fair ? 0 : clamp(swerve, -0.6, 0.6) / Math.max(k.length * 0.35, tightest * 0.6);
@@ -836,9 +848,9 @@ function drawCetacean(ctx, a, tile) {
   const pitch = (lag, gain) => look.pitch * gain * Math.sin(2 * Math.PI * (phase - lag));
   const pivot = L2 * look.pivot;
   const squash = 1 - Math.cos(pitch(0, 1));
-  const shift = (d) => d > pivot ? squash * (d - pivot) ** 2 / (L2 - pivot) : 0;
+  const shift2 = (d) => d > pivot ? squash * (d - pivot) ** 2 / (L2 - pivot) : 0;
   const pose = (d) => {
-    const s = Math.max(0, d - shift(d)) / STEP2;
+    const s = Math.max(0, d - shift2(d)) / STEP2;
     const i = Math.min(line.length - 2, Math.floor(s));
     const t = s - i;
     const [f, g] = [line[i], line[i + 1]];
@@ -2242,12 +2254,7 @@ function mountPanel(host, settings, change, inView) {
   });
   shadow.addEventListener("input", (e) => {
     const input = e.target;
-    if (input.id === "cell") set({ cell: Number(input.value) });
-    if (input.id === "zoomOut") $('[data-value="zoomOut"]').textContent = `${Number(input.value).toFixed(1).replace(".", ",")}\xD7`;
-  });
-  shadow.addEventListener("change", (e) => {
-    const input = e.target;
-    if (input.id === "zoomOut") set({ zoomOut: Number(input.value) });
+    if (input.id === "cell" || input.id === "zoomOut") set({ [input.id]: Number(input.value) });
   });
   const keys = (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -2350,7 +2357,7 @@ function mountSharkNight(host, options = {}) {
   let cols = 0;
   let rows = 0;
   let watch;
-  let stale = false;
+  let seaWidth = 0;
   let panel;
   function rules() {
     sea.atOnce = settings.atOnce;
@@ -2362,10 +2369,21 @@ function mountSharkNight(host, options = {}) {
     canvas.width = Math.round(Math.max(1, host.clientWidth) * dpr);
     canvas.height = Math.round(Math.max(1, host.clientHeight) * dpr);
     scale = canvas.width / WIDTH;
+    seaWidth = WIDTH;
     sea = createSea(Math.round(canvas.height / scale));
     rules();
     water();
     if (settings.observe !== null) observe(settings.observe);
+  }
+  function rezoom() {
+    const width = normalWidth();
+    const depth = Math.round(canvas.height * width / canvas.width);
+    shift(sea, (width - seaWidth) / 2, (depth - sea.h) / 2);
+    seaWidth = width;
+    setWidth(width);
+    sea.h = depth;
+    scale = canvas.width / width;
+    water();
   }
   function focusOf(a) {
     if (a.fish.length > 0) return { x: a.fish.reduce((t, f) => t + f.x, 0) / a.fish.length, y: a.fish.reduce((t, f) => t + f.y, 0) / a.fish.length };
@@ -2375,12 +2393,11 @@ function mountSharkNight(host, options = {}) {
   function observe(name) {
     if (name === null) {
       watch = void 0;
-      if (stale) {
-        stale = false;
-        layout();
+      setWidth(seaWidth);
+      if (seaWidth !== normalWidth()) {
+        rezoom();
         return;
       }
-      setWidth(normalWidth());
     } else {
       const kind = KINDS.findIndex((k2) => k2.name === name);
       const k = KINDS[kind];
@@ -2552,10 +2569,8 @@ function mountSharkNight(host, options = {}) {
     if (patch.zoomOut !== void 0) {
       if (watch !== void 0) {
         watch.view = framing(watch.kind, settings.zoomOut);
-        stale = true;
       } else {
-        layout();
-        settle();
+        rezoom();
       }
     }
     if (patch.observe !== void 0) observe(patch.observe);
