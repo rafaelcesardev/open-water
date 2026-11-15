@@ -1915,6 +1915,37 @@ var DRAW = {
   school: drawSchool
 };
 
+// src/mosaic.ts
+var GLYPHS = "$%tSX8@:;#S%X8tS";
+var SHADES = [1, 0.886, 0.776, 0.659];
+var GLYPH_INK = 0.227;
+var GLYPH_LIFT = 0.72;
+var DEEP_DARK = "#171d24";
+var DEEP_LIGHT = "#c9d8de";
+var TINT = 0.3;
+var CLEAR = 0.85;
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = a + 1831565813 >>> 0;
+    let t = a;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function tileTable() {
+  const rand = rng(7);
+  const shade = [];
+  const glyph = [];
+  for (let i = 0; i < 256; i += 1) {
+    const r = rand();
+    shade.push(SHADES[r < 0.4 ? 0 : r < 0.7 ? 1 : r < 0.9 ? 2 : 3]);
+    glyph.push(rand() < 0.86 ? GLYPHS[Math.floor(rand() * GLYPHS.length)] : "");
+  }
+  return { shade, glyph };
+}
+
 // src/panel.ts
 var LABELS = {
   white: ["Branco", "Tubar\xE3o-branco", "#7b8388"],
@@ -2301,12 +2332,8 @@ function mountPanel(host, settings, change, inView) {
 
 // src/index.ts
 var LIGHT = "#dde6e9";
-var DEEP_DARK = "#171d24";
-var DEEP_LIGHT = "#c9d8de";
 var FADE = 0.8;
 var BLUR = 7;
-var TINT = 0.3;
-var CLEAR = 0.85;
 var CAUSTIC_DAY = 0.26;
 var CAUSTIC_NIGHT = 0.12;
 var NETS = [
@@ -2314,34 +2341,9 @@ var NETS = [
   [1.37, -6, 7]
 ];
 var SAVED = "open-water:settings";
-var GLYPHS = "$%tSX8@:;#S%X8tS";
-var SHADES = [1, 0.886, 0.776, 0.659];
-var GLYPH_INK = 0.227;
-var GLYPH_LIFT = 0.72;
 var STEP3 = 1 / 60;
 var MARGIN = 20;
-function rng(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = a + 1831565813 >>> 0;
-    let t = a;
-    t = Math.imul(t ^ t >>> 15, t | 1);
-    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
 var rgb = (r, g, b) => `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
-function tileTable() {
-  const rand = rng(7);
-  const shade = [];
-  const glyph = [];
-  for (let i = 0; i < 256; i += 1) {
-    const r = rand();
-    shade.push(SHADES[r < 0.4 ? 0 : r < 0.7 ? 1 : r < 0.9 ? 2 : 3]);
-    glyph.push(rand() < 0.86 ? GLYPHS[Math.floor(rand() * GLYPHS.length)] : "");
-  }
-  return { shade, glyph };
-}
 function causticNet() {
   const n = 128;
   const rand = rng(5);

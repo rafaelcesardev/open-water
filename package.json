@@ -5,7 +5,8 @@
   "scripts": {
     "build": "esbuild src/index.ts --bundle --format=esm --target=es2020 --outfile=open-water.js",
     "check": "tsc",
-    "test": "node --test"
+    "test": "node --test",
+    "theme": "esbuild src/backdrop.ts --bundle --format=esm --target=es2020 --outfile=theme/hooks/backdrop.js"
   },
   "devDependencies": {
     "@types/node": "26.6.6",

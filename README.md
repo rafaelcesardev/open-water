@@ -67,6 +67,20 @@ Opções:
 
 Com "reduzir movimento" ligado no sistema, mostra uma cena parada.
 
+## Tema do app Claude (protótipo)
+
+`theme/` é um mod do Claude Code que põe o mar atrás da conversa no app desktop e no celular, com as cores do app tiradas dele (só modo escuro). O app aceita como fundo um SVG sem script, redesenhado no máximo 10 vezes por segundo. Então o mod roda a simulação ele mesmo e, a cada 1,2 segundo, manda o trecho seguinte do mar como um SVG que se anima sozinho. Cada trecho já está pronto antes da troca, começa um décimo de segundo adiante (o tempo que o app leva para mostrá-lo) e traz 0,3 segundo a mais no fim, para continuar nadando se a troca atrasar. Continua ao vivo: cada trecho é simulado na hora.
+
+- **Mosaico** (padrão): sem canvas, cada corpo é pintado numa grade de amostras (`src/mosaic.ts`), dois por dois por ladrilho, e o ladrilho acende onde o corpo cobre a maior parte dele, como na página. O SVG traz os ladrilhos do primeiro momento e, até 20 vezes por segundo, só os que mudaram. Os tons, as letras e as frestas são uma camada parada por cima, na cor da água, então só aparecem sobre um ladrilho aceso, e o app só redesenha onde os ladrilhos mudam. Cabem todas as espécies; o tema usa até 5 de uma vez, sem a baleia-azul e o cardume, que são os que mais acendem ladrilhos; quando o trecho passa do limite do app (131.072 caracteres), ele manda menos momentos por segundo.
+- **Liso** (`style: 'smooth'`): o corpo desenhado, movido entre amostras por SMIL. Um animal por vez, e só os que cabem no limite (os quatro tubarões, orca, golfinho e manta).
+
+Por enquanto sem cáusticas.
+
+```bash
+npm run theme                       # gera theme/hooks/backdrop.js a partir de src/backdrop.ts
+claude --plugin-dir theme           # ou CLAUDE_CODE_PLUGIN_DIRS=theme
+```
+
 ## Código
 
 - `src/sim.ts`: a simulação: espécies com tamanho e ritmo reais, entrada e saída, perseguição, fuga, desvio. Não toca no navegador: cada mar guarda a própria largura, então dois podem rodar na mesma página.
@@ -76,8 +90,11 @@ Com "reduzir movimento" ligado no sistema, mostra uma cena parada.
 - `src/index.ts`: o canvas (contorno e mosaico) e `mountOpenWater`.
 - `src/panel.ts`: o painel de controles.
 - `open-water.js`: tudo junto, pronto para o navegador.
+- `src/svg.ts`: um contexto de desenho que grava SVG em vez de pintar, e junta vários momentos num SVG animado.
+- `src/mosaic.ts`: os ladrilhos do mosaico (os mesmos da página) e o mosaico sem canvas.
+- `src/backdrop.ts`: o mar como fundo do app Claude; `theme/` é o mod que o usa.
 
-Tudo é TypeScript; o único JavaScript é o `open-water.js`, gerado. Funciona igual com Node ou Bun:
+Tudo é TypeScript; o único JavaScript é o gerado (`open-water.js` e `theme/hooks/backdrop.js`) e o `theme/hooks/make-colors.js`, copiado como veio do kit de mods do Claude Code. Funciona igual com Node ou Bun:
 
 ```bash
 npm install      # ou: bun install
