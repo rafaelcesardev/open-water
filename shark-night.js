@@ -137,7 +137,6 @@ function setWidth(width) {
   WIDTH = width;
 }
 var STEP = 10;
-var AT_ONCE = 4;
 var clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 var turnTo = (heading, target) => {
   let d = (target - heading) % (Math.PI * 2);
@@ -220,11 +219,12 @@ function tailOf(a) {
   return last;
 }
 function createSea(h) {
-  return { h, animals: [], next: 0, gone: -1, chases: 0 };
+  return { h, animals: [], next: 0, gone: -1, chases: 0, atOnce: 4, allowed: new Set(KINDS.map((_, i) => i)) };
 }
 function arrive(sea, random) {
   const here = new Set(sea.animals.map((a) => a.kind));
-  const kinds = KINDS.map((_, i) => i).filter((i) => !here.has(i) && i !== sea.gone);
+  const open = KINDS.map((_, i) => i).filter((i) => sea.allowed.has(i) && !here.has(i));
+  const kinds = open.length > 1 ? open.filter((i) => i !== sea.gone) : open;
   const kind = kinds[Math.floor(random() * kinds.length)];
   if (kind === void 0) return;
   const k = KINDS[kind];
@@ -271,7 +271,7 @@ function stepSea(sea, dt, tile, random = Math.random) {
     return !gone;
   });
   sea.next -= dt;
-  if (sea.animals.length < AT_ONCE && sea.next <= 0) arrive(sea, random);
+  if (sea.animals.length < sea.atOnce && sea.next <= 0) arrive(sea, random);
   for (const s of sea.animals) {
     const k = KINDS[s.kind];
     const step = Math.max(1, s.speed * dt);
@@ -1882,7 +1882,230 @@ var DRAW = {
   school: drawSchool
 };
 
+// src/panel.ts
+var LABELS = {
+  white: ["Tubar\xE3o-branco", "#6b7378"],
+  hammer: ["Tubar\xE3o-martelo", "#7a796d"],
+  tiger: ["Tubar\xE3o-tigre", "#6c7670"],
+  blacktip: ["Galha-preta", "#7c786d"],
+  blue: ["Baleia-azul", "#566f80"],
+  orca: ["Orca", "#24272b"],
+  dolphin: ["Golfinho", "#666e75"],
+  turtle: ["Tartaruga-verde", "#7a6b45"],
+  manta: ["Manta", "#2b2f34"],
+  squid: ["Lula-gigante", "#7c2f2b"],
+  jacks: ["Cardume de xar\xE9us", "#a3afb5"]
+};
+var CSS = `
+:host { all: initial; }
+* { box-sizing: border-box; }
+.wrap {
+  --glass: rgba(26, 29, 33, 0.46);
+  --edge: rgba(255, 255, 255, 0.10);
+  --shine: rgba(255, 255, 255, 0.07);
+  --text: #e9edef;
+  --muted: rgba(233, 237, 239, 0.58);
+  --track: rgba(255, 255, 255, 0.10);
+  --chip: rgba(255, 255, 255, 0.06);
+  --chip-on: rgba(255, 255, 255, 0.16);
+  --accent: #8fd3e8;
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.38);
+  font: 13px/1.35 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  max-height: calc(100% - 32px);
+  display: flex;
+  z-index: 10;
+}
+.wrap.light {
+  --glass: rgba(255, 255, 255, 0.52);
+  --edge: rgba(255, 255, 255, 0.75);
+  --shine: rgba(255, 255, 255, 0.5);
+  --text: #1c2226;
+  --muted: rgba(28, 34, 38, 0.56);
+  --track: rgba(20, 30, 40, 0.12);
+  --chip: rgba(20, 30, 40, 0.05);
+  --chip-on: rgba(20, 30, 40, 0.12);
+  --accent: #1f7d99;
+  --shadow: 0 18px 50px rgba(30, 50, 70, 0.20);
+}
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid var(--edge);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--shine);
+}
+.panel {
+  width: 292px;
+  max-width: calc(100vw - 32px);
+  border-radius: 20px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.wrap.closed .panel { display: none; }
+.wrap:not(.closed) .fab { display: none; }
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 16px 6px 18px;
+}
+h1 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: 0.01em; }
+section { padding: 10px 18px 14px; }
+section + section { border-top: 1px solid var(--track); }
+h2 {
+  margin: 0 0 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted);
+}
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 10px 0; }
+.row label, .row .name { color: var(--text); }
+.value { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 3ch; text-align: right; }
+button {
+  font: inherit; color: inherit; background: none; border: 0; cursor: pointer; border-radius: 10px;
+}
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.icon {
+  width: 32px; height: 32px; display: grid; place-items: center; color: var(--muted);
+  transition: background 0.15s, color 0.15s;
+}
+.icon:hover { background: var(--chip-on); color: var(--text); }
+.segmented {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; padding: 3px;
+  background: var(--chip); border-radius: 12px; width: 100%;
+}
+.segmented button { padding: 6px 8px; border-radius: 9px; color: var(--muted); transition: background 0.15s, color 0.15s; }
+.segmented button[aria-pressed="true"] { background: var(--chip-on); color: var(--text); font-weight: 600; }
+input[type="range"] { width: 100%; accent-color: var(--accent); margin: 2px 0 0; }
+.slider { margin: 12px 0; }
+.slider .top { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.species { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.species label {
+  display: flex; align-items: center; gap: 10px; padding: 6px 8px; margin: 0 -8px;
+  border-radius: 10px; cursor: pointer; transition: background 0.15s;
+}
+.species label:hover { background: var(--chip); }
+.dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 1px var(--edge); flex: none; }
+.species .name { flex: 1; }
+.species input { position: absolute; opacity: 0; pointer-events: none; }
+.switch {
+  width: 30px; height: 18px; border-radius: 9px; background: var(--track); position: relative; flex: none;
+  transition: background 0.15s;
+}
+.switch::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); transition: transform 0.15s;
+}
+.species input:checked + .switch { background: var(--accent); }
+.species input:checked + .switch::after { transform: translateX(12px); }
+.species input:focus-visible + .switch { outline: 2px solid var(--accent); outline-offset: 2px; }
+.links { display: flex; gap: 6px; }
+.links button { font-size: 12px; color: var(--accent); padding: 2px 6px; }
+.links button:hover { background: var(--chip); }
+.wide { width: 100%; padding: 8px; background: var(--chip); border-radius: 12px; font-weight: 600; }
+.wide:hover { background: var(--chip-on); }
+.fab { width: 46px; height: 46px; border-radius: 16px; display: grid; place-items: center; color: var(--text); }
+.hidden { display: none; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+`;
+var SLIDERS = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>';
+var CLOSE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
+function mountPanel(host, settings, change) {
+  const root = document.createElement("div");
+  host.appendChild(root);
+  const shadow = root.attachShadow({ mode: "open" });
+  const segmented = (name, label, options) => `<div class="segmented" role="group" aria-label="${label}">${options.map(([v, t]) => `<button type="button" data-${name}="${v}">${t}</button>`).join("")}</div>`;
+  const slider = (name, label, min, max, step) => `<div class="slider" data-row="${name}"><div class="top"><label for="${name}">${label}</label><span class="value" data-value="${name}"></span></div><input id="${name}" type="range" min="${min}" max="${max}" step="${step}"></div>`;
+  shadow.innerHTML = `<style>${CSS}</style>
+  <div class="wrap">
+    <div class="panel glass" id="panel" role="region" aria-label="Controles do Shark Night">
+      <header><h1>Shark Night</h1><button type="button" class="icon" data-collapse aria-label="Recolher controles" aria-controls="panel">${CLOSE}</button></header>
+      <section>
+        <h2>Animais</h2>
+        ${slider("atOnce", "Animais por vez", 1, 8, 1)}
+        <div class="row"><span class="name">Esp\xE9cies</span><span class="links"><button type="button" data-all>Todas</button><button type="button" data-none>Nenhuma</button></span></div>
+        <ul class="species">${KINDS.map((k) => `<li><label><span class="dot" style="background:${LABELS[k.name][1]}"></span><span class="name">${LABELS[k.name][0]}</span><input type="checkbox" data-kind="${k.name}"><span class="switch" aria-hidden="true"></span></label></li>`).join("")}</ul>
+      </section>
+      <section>
+        <h2>Visual</h2>
+        <div class="row">${segmented("theme", "Tema", [["dark", "Escuro"], ["light", "Claro"]])}</div>
+        <div class="row">${segmented("style", "Estilo", [["mosaic", "Mosaico"], ["smooth", "Liso"]])}</div>
+        ${slider("zoomOut", "Zoom (afastar)", 0.6, 3, 0.1)}
+        ${slider("cell", "Ladrilho do mosaico", 6, 20, 1)}
+      </section>
+      <section>
+        <h2>Tempo</h2>
+        <div class="row">${segmented("speed", "Velocidade", [["0.5", "0,5\xD7"], ["1", "1\xD7"], ["2", "2\xD7"]])}</div>
+        <button type="button" class="wide" data-pause></button>
+      </section>
+    </div>
+    <button type="button" class="fab glass" data-open aria-label="Mostrar controles" aria-controls="panel">${SLIDERS}</button>
+  </div>`;
+  const $ = (sel) => shadow.querySelector(sel);
+  const $$ = (sel) => [...shadow.querySelectorAll(sel)];
+  const wrap = $(".wrap");
+  const set = (patch) => {
+    Object.assign(settings, patch);
+    change(patch);
+    refresh();
+  };
+  function refresh() {
+    wrap.classList.toggle("light", settings.theme === "light");
+    for (const b of $$("[data-theme]")) b.setAttribute("aria-pressed", String(b.dataset.theme === settings.theme));
+    for (const b of $$("[data-style]")) b.setAttribute("aria-pressed", String(b.dataset.style === settings.style));
+    for (const b of $$("[data-speed]")) b.setAttribute("aria-pressed", String(Number(b.dataset.speed) === settings.speed));
+    for (const c of $$("[data-kind]")) c.checked = settings.species.includes(c.dataset.kind);
+    const show = { atOnce: String(settings.atOnce), zoomOut: `${settings.zoomOut.toFixed(1).replace(".", ",")}\xD7`, cell: String(settings.cell) };
+    for (const name of ["atOnce", "zoomOut", "cell"]) {
+      $(`#${name}`).value = String(settings[name]);
+      $(`[data-value="${name}"]`).textContent = show[name];
+    }
+    $('[data-row="cell"]').classList.toggle("hidden", settings.style !== "mosaic");
+    $("[data-pause]").textContent = settings.paused ? "Continuar" : "Pausar";
+  }
+  shadow.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (b === null) return;
+    if (b.dataset.theme !== void 0) set({ theme: b.dataset.theme });
+    else if (b.dataset.style !== void 0) set({ style: b.dataset.style });
+    else if (b.dataset.speed !== void 0) set({ speed: Number(b.dataset.speed) });
+    else if (b.hasAttribute("data-pause")) set({ paused: !settings.paused });
+    else if (b.hasAttribute("data-all")) set({ species: KINDS.map((k) => k.name) });
+    else if (b.hasAttribute("data-none")) set({ species: [] });
+    else if (b.hasAttribute("data-collapse")) {
+      wrap.classList.add("closed");
+      $("[data-open]").focus();
+    } else if (b.hasAttribute("data-open")) {
+      wrap.classList.remove("closed");
+      $("[data-collapse]").focus();
+    }
+  });
+  shadow.addEventListener("change", (e) => {
+    const input = e.target;
+    if (input.dataset.kind !== void 0) {
+      const kind = input.dataset.kind;
+      set({ species: input.checked ? [...settings.species, kind] : settings.species.filter((n) => n !== kind) });
+    }
+  });
+  shadow.addEventListener("input", (e) => {
+    const input = e.target;
+    if (input.id === "atOnce" || input.id === "cell") set({ [input.id]: Number(input.value) });
+    if (input.id === "zoomOut") $('[data-value="zoomOut"]').textContent = `${Number(input.value).toFixed(1).replace(".", ",")}\xD7`;
+  });
+  shadow.addEventListener("change", (e) => {
+    const input = e.target;
+    if (input.id === "zoomOut") set({ zoomOut: Number(input.value) });
+  });
+  if (host.clientWidth < 640) wrap.classList.add("closed");
+  refresh();
+  return () => root.remove();
+}
+
 // src/index.ts
+var LIGHT = "#dde6e9";
+var SAVED = "shark-night:settings";
 var GLYPHS = "$%tSX8@:;#S%X8tS";
 var SHADES = [1, 0.886, 0.776, 0.659];
 var GLYPH_INK = 0.227;
@@ -1910,10 +2133,32 @@ function tileTable() {
   return { shade, glyph };
 }
 function mountSharkNight(host, options = {}) {
-  const style = options.style ?? "mosaic";
-  const cell = options.cell ?? 10;
-  const background = options.background ?? "#191919";
-  setWidth(1600 * Math.max(0.5, options.zoomOut ?? 1.5));
+  const settings = {
+    theme: options.theme ?? "dark",
+    style: options.style ?? "mosaic",
+    zoomOut: options.zoomOut ?? 1.5,
+    cell: options.cell ?? 10,
+    atOnce: options.atOnce ?? 4,
+    species: options.species ?? KINDS.map((k) => k.name),
+    speed: options.speed ?? 1,
+    paused: false
+  };
+  if (options.controls === true) {
+    try {
+      Object.assign(settings, JSON.parse(localStorage.getItem(SAVED) ?? "{}"), { paused: false });
+    } catch {
+    }
+    const number = (v, lo, hi, fallback) => typeof v === "number" && v >= lo && v <= hi ? v : fallback;
+    settings.theme = settings.theme === "light" ? "light" : "dark";
+    settings.style = settings.style === "smooth" ? "smooth" : "mosaic";
+    settings.zoomOut = number(settings.zoomOut, 0.6, 3, 1.5);
+    settings.cell = number(settings.cell, 6, 20, 10);
+    settings.atOnce = number(settings.atOnce, 1, 8, 4);
+    settings.speed = [0.5, 1, 2].includes(settings.speed) ? settings.speed : 1;
+    settings.species = Array.isArray(settings.species) ? KINDS.map((k) => k.name).filter((n) => settings.species.includes(n)) : KINDS.map((k) => k.name);
+  }
+  const darkWater = options.background ?? "#191919";
+  setWidth(1600 * Math.max(0.5, settings.zoomOut));
   const tiles = tileTable();
   const canvas = document.createElement("canvas");
   canvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block";
@@ -1927,23 +2172,33 @@ function mountSharkNight(host, options = {}) {
   let scale = 1;
   let cols = 0;
   let rows = 0;
+  function rules() {
+    sea.atOnce = settings.atOnce;
+    sea.allowed = new Set(KINDS.flatMap((k, i) => settings.species.includes(k.name) ? [i] : []));
+  }
   function layout() {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     canvas.width = Math.round(Math.max(1, host.clientWidth) * dpr);
     canvas.height = Math.round(Math.max(1, host.clientHeight) * dpr);
     scale = canvas.width / WIDTH;
-    const depth = Math.round(canvas.height / scale);
+    sea = createSea(Math.round(canvas.height / scale));
+    rules();
+    water();
+  }
+  function water() {
+    const cell = settings.cell;
+    const light = settings.theme === "light";
     cols = Math.ceil(WIDTH / cell);
-    rows = Math.ceil(depth / cell);
+    rows = Math.ceil(sea.h / cell);
     low.width = cols;
     low.height = rows;
     still.width = canvas.width;
     still.height = canvas.height;
     const sctx = still.getContext("2d");
-    sctx.fillStyle = background;
+    sctx.fillStyle = light ? LIGHT : darkWater;
     sctx.fillRect(0, 0, still.width, still.height);
-    if (style === "mosaic") {
-      sctx.strokeStyle = "rgba(255,255,255,.028)";
+    if (settings.style === "mosaic") {
+      sctx.strokeStyle = light ? "rgba(0,0,0,.05)" : "rgba(255,255,255,.028)";
       sctx.lineWidth = 1;
       sctx.beginPath();
       for (let c = 0; c <= cols; c += 1) {
@@ -1958,19 +2213,19 @@ function mountSharkNight(host, options = {}) {
       }
       sctx.stroke();
       const rand = rng(99);
-      sctx.fillStyle = "rgba(255,255,255,.2)";
+      sctx.fillStyle = light ? "rgba(0,0,0,.12)" : "rgba(255,255,255,.2)";
       for (let i = 0; i < 120; i += 1) {
         const x = Math.floor(rand() * cols) * cell;
         const y = Math.floor(rand() * rows) * cell;
         sctx.fillRect((x + cell * 0.3) * scale, (y + cell * 0.45) * scale, cell * 0.4 * scale, cell * 0.1 * scale);
       }
     }
-    sea = createSea(depth);
   }
   function paint() {
+    const cell = settings.cell;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(still, 0, 0);
-    if (style === "smooth") {
+    if (settings.style === "smooth") {
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
       ctx.lineJoin = "round";
       for (const a of sea.animals) DRAW[KINDS[a.kind].plan](ctx, a, 0);
@@ -2012,7 +2267,7 @@ function mountSharkNight(host, options = {}) {
   let last = performance.now();
   let owed = 0;
   const tick = (now) => {
-    owed += Math.min(0.25, (now - last) / 1e3);
+    owed += settings.paused ? 0 : Math.min(0.25, (now - last) / 1e3) * settings.speed;
     last = now;
     let stepped = false;
     while (owed >= STEP3) {
@@ -2023,8 +2278,11 @@ function mountSharkNight(host, options = {}) {
     if (stepped) paint();
     frame = requestAnimationFrame(tick);
   };
+  const settle = () => {
+    if (reduced.matches) for (let i = 0; i < 1500; i += 1) stepSea(sea, STEP3, MARGIN);
+  };
   if (reduced.matches) {
-    for (let i = 0; i < 1500; i += 1) stepSea(sea, STEP3, MARGIN);
+    settle();
     paint();
   } else {
     paint();
@@ -2035,15 +2293,38 @@ function mountSharkNight(host, options = {}) {
     clearTimeout(resizing);
     resizing = window.setTimeout(() => {
       layout();
+      settle();
       paint();
     }, 150);
   });
   observer.observe(host);
+  function apply(patch) {
+    if (patch.zoomOut !== void 0) {
+      setWidth(1600 * Math.max(0.5, settings.zoomOut));
+      layout();
+      settle();
+    }
+    if (patch.theme !== void 0 || patch.style !== void 0 || patch.cell !== void 0) water();
+    if (patch.species !== void 0 || patch.atOnce !== void 0) {
+      rules();
+      const oldest = [...sea.animals].sort((a, b) => b.age - a.age);
+      oldest.forEach((a, i) => {
+        if (!sea.allowed.has(a.kind) || i < sea.animals.length - sea.atOnce) a.stay = 0;
+      });
+    }
+    paint();
+    try {
+      localStorage.setItem(SAVED, JSON.stringify(settings));
+    } catch {
+    }
+  }
+  const panel = options.controls === true ? mountPanel(host, settings, apply) : void 0;
   return () => {
     cancelAnimationFrame(frame);
     observer.disconnect();
     clearTimeout(resizing);
     canvas.remove();
+    panel?.();
   };
 }
 export {

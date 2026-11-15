@@ -19,6 +19,16 @@ Um mar escuro visto de cima, ao vivo, e os animais que passam por ele no tamanho
 - **Cores reais vistas de cima:** o dorso de cada espécie, mais escuro no meio e mais claro para os lados. Orca e manta usam um preto levemente clareado, senão sumiriam no mar escuro.
 - **Mosaico:** cada ladrilho acende inteiro com a cor do animal que está embaixo, um pouco mais claro ou mais escuro que os vizinhos, com uma letra recortada. Os xaréus são mais finos que um ladrilho, então cada um acende um traço de ladrilhos ao longo do corpo, e o cardume aparece como muitos traços paralelos, todos na mesma direção.
 
+## Controles
+
+Um painel flutuante à esquerda, com efeito de vidro fosco, para mudar tudo ao vivo:
+
+- **Animais:** quantos podem aparecer de uma vez (1 a 8) e quais espécies podem entrar (com "Todas" e "Nenhuma"). Desligar uma espécie, ou diminuir o número, faz os que sobram irem embora nadando, sem sumir de repente.
+- **Visual:** tema escuro ou claro, mosaico ou liso, zoom (que recomeça a cena) e o tamanho do ladrilho do mosaico.
+- **Tempo:** velocidade 0,5×, 1× ou 2×, e pausar.
+
+O painel recolhe num botão. Em tela estreita, ele já começa recolhido. As escolhas ficam salvas no navegador.
+
 ## Usar
 
 Abra `index.html` por um servidor (módulos não carregam direto do arquivo):
@@ -33,7 +43,7 @@ Num site, basta o `shark-night.js` e um elemento para ocupar:
 <div id="sea" style="position:fixed;inset:0"></div>
 <script type="module">
   import { mountSharkNight } from './shark-night.js'
-  const stop = mountSharkNight(document.getElementById('sea'), { style: 'mosaic', zoomOut: 1.5, cell: 10 })
+  const stop = mountSharkNight(document.getElementById('sea'), { style: 'mosaic', zoomOut: 1.5, cell: 10, controls: true })
   // stop() para remover
 </script>
 ```
@@ -43,7 +53,12 @@ Opções:
 - `style`: `'mosaic'` (padrão), os animais em ladrilhos com letras; ou `'smooth'`, o contorno liso.
 - `zoomOut`: quão de longe o mar é visto. `1` é o tamanho original; maior mostra mais mar e animais menores. Padrão `1.5`.
 - `cell`: tamanho do ladrilho do mosaico, em unidades do mar (1600 de largura com `zoomOut: 1`). Padrão `10`. Menor deixa o mosaico mais fino.
-- `background`: cor da água. Padrão `#191919`.
+- `theme`: `'dark'` (padrão), o mar à noite; ou `'light'`, água clara.
+- `atOnce`: quantos animais no máximo de uma vez (o cardume conta como um). Padrão `4`.
+- `species`: as espécies que podem entrar, por nome (`'white'`, `'hammer'`, `'tiger'`, `'blacktip'`, `'blue'`, `'orca'`, `'dolphin'`, `'turtle'`, `'manta'`, `'squid'`, `'jacks'`). Padrão: todas.
+- `speed`: velocidade do tempo. `1` é tempo real. Padrão `1`.
+- `background`: cor da água no tema escuro. Padrão `#191919`.
+- `controls`: `true` mostra o painel de controles. Padrão `false`, para quem incorpora num site não ganhar um painel sem pedir. O `index.html` liga.
 
 Com "reduzir movimento" ligado no sistema, mostra uma cena parada.
 
@@ -53,6 +68,7 @@ Com "reduzir movimento" ligado no sistema, mostra uma cena parada.
 - `src/school.ts`: o cardume, peixe a peixe.
 - `src/draw/`: o desenho de cada tipo de corpo (`shark`, `cetacean`, `turtle`, `ray`, `squid`, `school`).
 - `src/index.ts`: o canvas (contorno e mosaico) e `mountSharkNight`.
+- `src/panel.ts`: o painel de controles.
 - `shark-night.js`: tudo junto, pronto para o navegador.
 
 Para gerar o `shark-night.js` de novo depois de mudar o código:

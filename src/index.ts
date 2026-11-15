@@ -11,18 +11,32 @@
 // in place as an animal passes. `style: 'smooth'` shows the drawn animals themselves.
 
 import { DRAW } from './draw/all'
-import { KINDS, WIDTH, createSea, setWidth, stepSea, type Sea } from './sim'
+import { mountPanel, type Settings } from './panel'
+import { KINDS, WIDTH, createSea, setWidth, stepSea, type Kind, type Sea } from './sim'
 
 export type Options = {
   /** 'mosaic' (default): the animals as glyph tiles. 'smooth': the drawn animals themselves. */
   style?: 'mosaic' | 'smooth'
+  /** 'dark' (default): a night sea. 'light': pale water. */
+  theme?: 'dark' | 'light'
   /** How far off the sea is seen: 1 as designed, more shows a wider sea with smaller animals. Default 1.5. */
   zoomOut?: number
   /** Mosaic only: the tile's size, in units of the sea. Smaller, finer mosaic. Default 10. */
   cell?: number
-  /** The water. Default #191919. */
+  /** At most this many animals in view at once (a school counts as one). Default 4. */
+  atOnce?: number
+  /** The kinds that may come in. Default all. */
+  species?: Kind['name'][]
+  /** How fast time runs: 1 real time. Default 1. */
+  speed?: number
+  /** The dark theme's water. Default #191919. */
   background?: string
+  /** A floating panel on the left to change all of the above as it runs; the viewer's choices are remembered. */
+  controls?: boolean
 }
+
+const LIGHT = '#dde6e9'
+const SAVED = 'shark-night:settings'
 
 const GLYPHS = '$%tSX8@:;#S%X8tS'
 const SHADES = [1, 0.886, 0.776, 0.659]
@@ -58,10 +72,35 @@ function tileTable(): { shade: number[]; glyph: string[] } {
 
 /** Starts Shark Night in `host` (any element; the canvas fills it). Returns a function that stops it. */
 export function mountSharkNight(host: HTMLElement, options: Options = {}): () => void {
-  const style = options.style ?? 'mosaic'
-  const cell = options.cell ?? 10
-  const background = options.background ?? '#191919'
-  setWidth(1600 * Math.max(0.5, options.zoomOut ?? 1.5))
+  const settings: Settings = {
+    theme: options.theme ?? 'dark',
+    style: options.style ?? 'mosaic',
+    zoomOut: options.zoomOut ?? 1.5,
+    cell: options.cell ?? 10,
+    atOnce: options.atOnce ?? 4,
+    species: options.species ?? KINDS.map(k => k.name),
+    speed: options.speed ?? 1,
+    paused: false,
+  }
+  if (options.controls === true) {
+    // The viewer's last choices, if this browser kept them.
+    try {
+      Object.assign(settings, JSON.parse(localStorage.getItem(SAVED) ?? '{}') as Partial<Settings>, { paused: false })
+    } catch {
+      // No storage here: the defaults stand.
+    }
+    // What was kept may be from an older version or tampered with: only what makes sense now.
+    const number = (v: unknown, lo: number, hi: number, fallback: number): number => (typeof v === 'number' && v >= lo && v <= hi ? v : fallback)
+    settings.theme = settings.theme === 'light' ? 'light' : 'dark'
+    settings.style = settings.style === 'smooth' ? 'smooth' : 'mosaic'
+    settings.zoomOut = number(settings.zoomOut, 0.6, 3, 1.5)
+    settings.cell = number(settings.cell, 6, 20, 10)
+    settings.atOnce = number(settings.atOnce, 1, 8, 4)
+    settings.speed = [0.5, 1, 2].includes(settings.speed) ? settings.speed : 1
+    settings.species = Array.isArray(settings.species) ? KINDS.map(k => k.name).filter(n => settings.species.includes(n)) : KINDS.map(k => k.name)
+  }
+  const darkWater = options.background ?? '#191919'
+  setWidth(1600 * Math.max(0.5, settings.zoomOut))
   const tiles = tileTable()
 
   const canvas = document.createElement('canvas')
@@ -81,24 +120,39 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
   let cols = 0
   let rows = 0
 
+  /** The sea's settings that the simulation reads: how many at once, which kinds. */
+  function rules(): void {
+    sea.atOnce = settings.atOnce
+    sea.allowed = new Set(KINDS.flatMap((k, i) => (settings.species.includes(k.name) ? [i] : [])))
+  }
+
+  /** A new sea the size of the window: on start, on resize, on a new zoom. */
   function layout(): void {
     const dpr = Math.min(2, window.devicePixelRatio || 1)
     canvas.width = Math.round(Math.max(1, host.clientWidth) * dpr)
     canvas.height = Math.round(Math.max(1, host.clientHeight) * dpr)
     // The sea spans the window's width; as deep as the window is tall, at that scale.
     scale = canvas.width / WIDTH
-    const depth = Math.round(canvas.height / scale)
+    sea = createSea(Math.round(canvas.height / scale))
+    rules()
+    water()
+  }
+
+  /** The still water, drawn once for each theme, style and tile: in the mosaic, a faint grid and a few dashes. */
+  function water(): void {
+    const cell = settings.cell
+    const light = settings.theme === 'light'
     cols = Math.ceil(WIDTH / cell)
-    rows = Math.ceil(depth / cell)
+    rows = Math.ceil(sea.h / cell)
     low.width = cols
     low.height = rows
     still.width = canvas.width
     still.height = canvas.height
     const sctx = still.getContext('2d')!
-    sctx.fillStyle = background
+    sctx.fillStyle = light ? LIGHT : darkWater
     sctx.fillRect(0, 0, still.width, still.height)
-    if (style === 'mosaic') {
-      sctx.strokeStyle = 'rgba(255,255,255,.028)'
+    if (settings.style === 'mosaic') {
+      sctx.strokeStyle = light ? 'rgba(0,0,0,.05)' : 'rgba(255,255,255,.028)'
       sctx.lineWidth = 1
       sctx.beginPath()
       for (let c = 0; c <= cols; c += 1) {
@@ -113,20 +167,20 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
       }
       sctx.stroke()
       const rand = rng(99)
-      sctx.fillStyle = 'rgba(255,255,255,.2)'
+      sctx.fillStyle = light ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.2)'
       for (let i = 0; i < 120; i += 1) {
         const x = Math.floor(rand() * cols) * cell
         const y = Math.floor(rand() * rows) * cell
         sctx.fillRect((x + cell * 0.3) * scale, (y + cell * 0.45) * scale, cell * 0.4 * scale, cell * 0.1 * scale)
       }
     }
-    sea = createSea(depth)
   }
 
   function paint(): void {
+    const cell = settings.cell
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.drawImage(still, 0, 0)
-    if (style === 'smooth') {
+    if (settings.style === 'smooth') {
       ctx.setTransform(scale, 0, 0, scale, 0, 0)
       ctx.lineJoin = 'round'
       for (const a of sea.animals) DRAW[KINDS[a.kind]!.plan](ctx, a, 0)
@@ -172,7 +226,7 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
   let owed = 0
   const tick = (now: number): void => {
     // A step of sea for every sixtieth of a second gone by; a long pause (a hidden tab) is not caught up.
-    owed += Math.min(0.25, (now - last) / 1000)
+    owed += settings.paused ? 0 : Math.min(0.25, (now - last) / 1000) * settings.speed
     last = now
     let stepped = false
     while (owed >= STEP) {
@@ -183,9 +237,12 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     if (stepped) paint()
     frame = requestAnimationFrame(tick)
   }
+  // Still: some seconds in, so a few animals are in view, and no motion.
+  const settle = (): void => {
+    if (reduced.matches) for (let i = 0; i < 1500; i += 1) stepSea(sea, STEP, MARGIN)
+  }
   if (reduced.matches) {
-    // Still: some seconds in, so a few animals are in view, and no motion.
-    for (let i = 0; i < 1500; i += 1) stepSea(sea, STEP, MARGIN)
+    settle()
     paint()
   } else {
     paint()
@@ -197,15 +254,42 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     clearTimeout(resizing)
     resizing = window.setTimeout(() => {
       layout()
+      settle()
       paint()
     }, 150)
   })
   observer.observe(host)
+
+  /** A change from the panel, applied as the sea runs. */
+  function apply(patch: Partial<Settings>): void {
+    if (patch.zoomOut !== undefined) {
+      setWidth(1600 * Math.max(0.5, settings.zoomOut))
+      layout()
+      settle()
+    }
+    if (patch.theme !== undefined || patch.style !== undefined || patch.cell !== undefined) water()
+    if (patch.species !== undefined || patch.atOnce !== undefined) {
+      rules()
+      // Nothing vanishes: a kind no longer wanted, and the oldest beyond the new count, swim off.
+      const oldest = [...sea.animals].sort((a, b) => b.age - a.age)
+      oldest.forEach((a, i) => {
+        if (!sea.allowed.has(a.kind) || i < sea.animals.length - sea.atOnce) a.stay = 0
+      })
+    }
+    paint()
+    try {
+      localStorage.setItem(SAVED, JSON.stringify(settings))
+    } catch {
+      // Not remembered: no storage here.
+    }
+  }
+  const panel = options.controls === true ? mountPanel(host, settings, apply) : undefined
 
   return () => {
     cancelAnimationFrame(frame)
     observer.disconnect()
     clearTimeout(resizing)
     canvas.remove()
+    panel?.()
   }
 }

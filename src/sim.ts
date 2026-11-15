@@ -3,8 +3,9 @@
 //
 // THE WORLD is WIDTH units wide and `h` deep, at 80 units a metre: every animal at its real size, so a blue whale
 // spans most of the view and a turtle is a fortieth of it.
-// ONLY WHAT IS IN VIEW EXISTS: at most four animals at once (a school of fish counts as one). One comes in from beyond
-// a random edge, stays a while, and swims off; once wholly out of view it is gone, and in a while another kind comes in.
+// ONLY WHAT IS IN VIEW EXISTS: at most `atOnce` animals at once, four by default (a school of fish counts as one), of
+// the kinds allowed. One comes in from beyond a random edge, stays a while, and swims off; once wholly out of view it
+// is gone, and in a while another kind comes in.
 // AN ANIMAL is a head that swims and a trail of where the head has been: its body lies along the trail, so it bends
 // through every turn the head took. Sharks sway side to side; whales and dolphins beat their flukes up and down and
 // barely sway; a turtle's shell and a ray's disc are rigid and turn whole; a squid jets mantle first, its arms trailing.
@@ -99,8 +100,6 @@ export function setWidth(width: number): void {
 }
 /** Units between two points of a body. */
 const STEP = 10
-/** At most this many animals in view at once. */
-const AT_ONCE = 4
 
 export type Point = { x: number; y: number }
 /** One fish of a school: where it is, its velocity, how far it has swum and how fast it is turning. */
@@ -147,6 +146,9 @@ export type Sea = {
   /** Seconds before another animal may come in, and the kind that left last (the next one is never that). */
   next: number
   gone: number
+  /** At most this many animals in view at once (a school counts as one), and the kinds that may come in. */
+  atOnce: number
+  allowed: Set<number>
   chases: number
 }
 
@@ -255,7 +257,7 @@ function tailOf(a: Animal): Point {
 
 /** A sea `h` units deep and empty: the first animals come in over the first seconds. */
 export function createSea(h: number): Sea {
-  return { h, animals: [], next: 0, gone: -1, chases: 0 }
+  return { h, animals: [], next: 0, gone: -1, chases: 0, atOnce: 4, allowed: new Set(KINDS.map((_, i) => i)) }
 }
 
 /**
@@ -265,7 +267,9 @@ export function createSea(h: number): Sea {
  */
 function arrive(sea: Sea, random: () => number): void {
   const here = new Set(sea.animals.map(a => a.kind))
-  const kinds = KINDS.map((_, i) => i).filter(i => !here.has(i) && i !== sea.gone)
+  const open = KINDS.map((_, i) => i).filter(i => sea.allowed.has(i) && !here.has(i))
+  // Never the kind that just left, unless it is the only one allowed.
+  const kinds = open.length > 1 ? open.filter(i => i !== sea.gone) : open
   const kind = kinds[Math.floor(random() * kinds.length)]
   if (kind === undefined) return
   const k = KINDS[kind]!
@@ -321,7 +325,7 @@ export function stepSea(sea: Sea, dt: number, tile: number, random: () => number
     return !gone
   })
   sea.next -= dt
-  if (sea.animals.length < AT_ONCE && sea.next <= 0) arrive(sea, random)
+  if (sea.animals.length < sea.atOnce && sea.next <= 0) arrive(sea, random)
 
   for (const s of sea.animals) {
     const k = KINDS[s.kind]!
