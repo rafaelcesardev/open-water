@@ -3,11 +3,11 @@
 // times a second: in the mosaic, the tiles that change at each sample (mosaic.ts); in the smooth style, the shapes
 // moved between samples by SMIL (svg.ts). Still live: each stretch is simulated just before it is sent, with real
 // randomness.
-// shortcut: no caustics, no blur of the deep, night sea only; upgrade if the app takes it well.
+// shortcut: no caustics, no blur of the deep; upgrade if the app takes it well.
 
 import { DRAW } from './draw/all.ts'
 import type { Ctx } from './draw/common.ts'
-import { createMosaic, type Shot } from './mosaic.ts'
+import { createMosaic, waterStyle, type Shot } from './mosaic.ts'
 import { KINDS, createSea, stepSea, type Kind, type Sea } from './sim.ts'
 import { SvgCtx, SvgPath, animate, type El } from './svg.ts'
 
@@ -26,7 +26,9 @@ export type BackdropOptions = {
   seconds?: number
   atOnce?: number
   species?: Kind['name'][]
+  /** The water at night and by day: the sea follows the app's dark and light mode. */
   water?: string
+  lightWater?: string
   /** The most characters one send may be (the app takes 131072). */
   limit?: number
 }
@@ -51,7 +53,7 @@ export type Backdrop = { sea: Sea; next: () => string }
 export function createBackdrop(o: BackdropOptions = {}): Backdrop {
   const mosaic = (o.style ?? 'mosaic') === 'mosaic'
   const [width, height, seconds, limit] = [o.width ?? 2400, o.height ?? 1500, o.seconds ?? 1.5, o.limit ?? 131072]
-  const water = o.water ?? '#191919'
+  const [water, lightWater] = [o.water ?? '#191919', o.lightWater ?? '#dde6e9']
   const sea = createSea(width, height)
   sea.atOnce = o.atOnce ?? (mosaic ? 4 : 1)
   const names = o.species ?? (mosaic ? KINDS.map(k => k.name) : SMOOTH_FITS)
@@ -62,7 +64,7 @@ export function createBackdrop(o: BackdropOptions = {}): Backdrop {
   // The deepest first: one nearer the surface passes over it.
   const inOrder = () => [...sea.animals].sort((p, q) => q.depth - p.depth)
 
-  const tiles = createMosaic(width, height, o.cell ?? 10, water)
+  const tiles = createMosaic(width, height, o.cell ?? 10)
   const shoot = (): Shot => {
     const shot = tiles.shot()
     for (const a of inOrder()) {
@@ -85,7 +87,7 @@ export function createBackdrop(o: BackdropOptions = {}): Backdrop {
   }
 
   const wrap = (body: string): string =>
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid slice"><rect width="${width}" height="${height}" fill="${water}"/>${body}</svg>`
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid slice">${waterStyle(water, lightWater)}<rect class="w" width="${width}" height="${height}"/>${body}</svg>`
 
   /**
    * The sea as a stream of moments, `RATE` a second, and each send the next `seconds` of it. A send starts `LEAD` into

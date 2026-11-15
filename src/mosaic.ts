@@ -303,31 +303,53 @@ export class RasterCtx extends SvgPath {
   }
 }
 
-/** How far apart two packed colours are, in the channel furthest apart; and how far is still the same to the eye on
- * one tile from one moment to the next. */
-const apart = (p: number, q: number): number => Math.max(Math.abs((p >> 16) - (q >> 16)), Math.abs(((p >> 8) & 255) - ((q >> 8) & 255)), Math.abs((p & 255) - (q & 255)))
+/** How far apart two tiles look: the channel furthest apart, as seen through the more opaque of the two (a deep
+ * tile's colour shows only that much over the water), or their see-through levels (a level is about 25 of 255); and
+ * how far is still the same to the eye on one tile from one moment to the next. */
+function apart(p: number, q: number): number {
+  const [lp, lq] = [p >>> 24, q >>> 24]
+  const colour = Math.max(Math.abs(((p >> 16) & 255) - ((q >> 16) & 255)), Math.abs(((p >> 8) & 255) - ((q >> 8) & 255)), Math.abs((p & 255) - (q & 255)))
+  return Math.max((colour * Math.max(lp, lq)) / LEVELS, Math.abs(lp - lq) * 25)
+}
 const SAME = 14
+/** How see-through a tile can be, in steps: a deep animal's tiles at `level / LEVELS` over the water. */
+const LEVELS = 10
 
-/** One moment of the mosaic: each tile's colour, packed 0xRRGGBB, or -1 for water. */
+/**
+ * The water's colours as CSS, the night sea and the pale one, by the viewer's mode: the sea follows the app's light
+ * and dark. Classes the mosaic and the backdrop use: `w` filled with water, `ws` stroked with it, `gl` the glyphs'
+ * see-through, `ink` the dashes, `grid` the faint grid.
+ */
+export function waterStyle(dark: string, light: string): string {
+  return (
+    `<style>.w{fill:${dark}}.ws{stroke:${dark}}.gl{fill-opacity:${1 - GLYPH_INK}}.ink{fill:#fff;fill-opacity:.2}.grid{stroke:#fff;stroke-opacity:.028}` +
+    `@media (prefers-color-scheme:light){.w{fill:${light}}.ws{stroke:${light}}.gl{fill-opacity:${GLYPH_LIFT}}.ink{fill:#000;fill-opacity:.12}.grid{stroke:#000;stroke-opacity:.05}}</style>`
+  )
+}
+
+/** One moment of the mosaic: each tile packed as its see-through level (bits 24 up) and colour 0xRRGGBB, or -1 for
+ * water. */
 export type Shot = Int32Array
 
 /**
- * The mosaic of a sea `width` by `height` units in tiles of `tile` units over `water` (the night sea): `ctx` to draw
- * each body into, `take` to light its tiles at its depth, and `animate` for the SVG of moments `step` seconds apart.
+ * The mosaic of a sea `width` by `height` units in tiles of `tile` units: `ctx` to draw each body into, `take` to
+ * light its tiles at its depth, and `animate` for the SVG of moments `step` seconds apart. The water is the
+ * `waterStyle` classes, so one SVG serves both modes: a deep tile is see-through over whichever water is there.
+ * shortcut: no tint toward the deep water's colour (the page tints by mode); add it per mode if the deep looks flat.
  */
-export function createMosaic(width: number, height: number, tile: number, water: string) {
+export function createMosaic(width: number, height: number, tile: number) {
   const cols = Math.ceil(width / tile)
   const rows = Math.ceil(height / tile)
   const ctx = new RasterCtx(cols, rows, tile)
-  const [wr, wg, wb] = parseColor(water)
-  const [dr, dg, db] = parseColor(DEEP_DARK)
-  /** Colours a little coarser than the eye tells apart, so fewer tiles change and more share a path. */
+  /** Colours a little coarser than the eye tells apart, so fewer tiles change and more share a path: coarser still
+   * the more see-through the tile, as less of its colour shows. */
   const Q = 6
-  const q = (v: number): number => Math.max(0, Math.min(255, Math.round(v / Q) * Q))
+  const q = (v: number, step: number): number => Math.max(0, Math.min(255, Math.round(v / step) * step))
 
   // The still water, made once: a few dashes under the tiles, and over them each tile's shade, its glyph cut into it
   // and the gap round it, all in the water's colour, so they show only on a lit tile; and the faint grid. Laid over
-  // the tiles rather than masking them, so the app repaints only where tiles change.
+  // the tiles rather than masking them, so the app repaints only where tiles change. On the pale sea the shades and
+  // glyphs come out lighter than the tile, as the page's glyphs do there.
   const table = tileTable()
   const span = 16 * tile
   let shades = ''
@@ -348,11 +370,11 @@ export function createMosaic(width: number, height: number, tile: number, water:
   let dashes = ''
   for (let i = 0; i < 120; i += 1) dashes += `M${Math.floor(rand() * cols) * tile + tile * 0.3} ${Math.floor(rand() * rows) * tile + tile * 0.45}h${tile * 0.4}v${tile * 0.1}h${-tile * 0.4}z`
   const under =
-    `<defs><pattern id="p" width="${span}" height="${span}" patternUnits="userSpaceOnUse" fill="${water}">${shades}` +
-    `<g fill-opacity="${1 - GLYPH_INK}" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" font-size="${tile * 0.72}" text-anchor="middle" dominant-baseline="middle">${glyphs}</g>` +
-    `<path d="${gaps}" stroke="${water}" stroke-width="${tile * 0.12}"/></pattern>` +
-    `<pattern id="grid" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse"><path d="M0 0H${tile}M0 0V${tile}" stroke="#fff" stroke-opacity=".028" fill="none"/></pattern></defs>` +
-    `<path fill="#fff" fill-opacity=".2" d="${dashes}"/>`
+    `<defs><pattern id="p" class="w" width="${span}" height="${span}" patternUnits="userSpaceOnUse">${shades}` +
+    `<g class="gl" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" font-size="${tile * 0.72}" text-anchor="middle" dominant-baseline="middle">${glyphs}</g>` +
+    `<path class="ws" d="${gaps}" stroke-width="${tile * 0.12}"/></pattern>` +
+    `<pattern id="grid" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse"><path class="grid" d="M0 0H${tile}M0 0V${tile}" fill="none"/></pattern></defs>` +
+    `<path class="ink" d="${dashes}"/>`
   const over = `<rect width="${width}" height="${height}" fill="url(#p)"/><rect width="${width}" height="${height}" fill="url(#grid)"/>`
 
   /** Paths of the tiles given, a path a colour, each row's neighbours of one colour one run, drawn as a line a tile
@@ -374,7 +396,9 @@ export function createMosaic(width: number, height: number, tile: number, water:
         ;[px, py] = [x + n, y]
         k += n
       }
-      out += `<path stroke="${c < 0 ? water : `#${c.toString(16).padStart(6, '0')}`}" d="${d}"/>`
+      const level = c >>> 24
+      const paint = c < 0 ? 'class="ws"' : `stroke="#${(c & 0xffffff).toString(16).padStart(6, '0')}"${level < LEVELS ? ` opacity="${level / LEVELS}"` : ''}`
+      out += `<path ${paint} d="${d}"/>`
     }
     return out
   }
@@ -385,19 +409,18 @@ export function createMosaic(width: number, height: number, tile: number, water:
     shot: (): Shot => new Int32Array(cols * rows).fill(-1),
     /** Lights the tiles of the body just drawn into `ctx`, `depth` deep (0 at the surface to 1), over `shot`. */
     take(shot: Shot, depth: number): void {
-      const tint = depth * TINT
-      const alpha = 1 - depth * CLEAR
+      // As see-through as it is deep.
+      const level = Math.max(1, Math.round((1 - depth * CLEAR) * LEVELS))
+      const step = (Q * LEVELS) / level
       ctx.take((t, r, g, b) => {
-        // Tinted toward the deep water, then as see-through as it is deep, over the night sea.
-        const [tr, tg, tb] = [r + (dr - r) * tint, g + (dg - g) * tint, b + (db - b) * tint]
-        shot[t] = (q(wr + (tr - wr) * alpha) << 16) | (q(wg + (tg - wg) * alpha) << 8) | q(wb + (tb - wb) * alpha)
+        shot[t] = (level << 24) | (q(r, step) << 16) | (q(g, step) << 8) | q(b, step)
       })
     },
     /** The moments as SVG markup inside the sea's `<svg>`: the first whole, each later one as what changed. */
     animate(shots: Shot[], step: number): string {
       const first = new Map<number, number>()
       shots[0]!.forEach((c, t) => {
-        if (c >= 0) first.set(t, c)
+        if (c !== -1) first.set(t, c)
       })
       let body = paths(first)
       // What each tile shows: a lit tile keeps its colour until the body's there differs by more than a little, so
@@ -405,13 +428,16 @@ export function createMosaic(width: number, height: number, tile: number, water:
       const shown = Int32Array.from(shots[0]!)
       for (let k = 1; k < shots.length; k += 1) {
         const changed = new Map<number, number>()
+        // A see-through tile goes over water, not over what the tile showed before.
+        const clear = new Map<number, number>()
         shots[k]!.forEach((c, t) => {
           const was = shown[t]!
-          if (c === was || (c >= 0 && was >= 0 && apart(c, was) <= SAME)) return
+          if (c === was || (c !== -1 && was !== -1 && apart(c, was) <= SAME)) return
           shown[t] = c
           changed.set(t, c)
+          if (c !== -1 && was !== -1 && c >>> 24 < LEVELS) clear.set(t, -1)
         })
-        if (changed.size > 0) body += `<g visibility="hidden"><set attributeName="visibility" to="visible" begin="${Math.round(k * step * 100) / 100}s"/>${paths(changed)}</g>`
+        if (changed.size > 0) body += `<g visibility="hidden"><set attributeName="visibility" to="visible" begin="${Math.round(k * step * 100) / 100}s"/>${paths(clear)}${paths(changed)}</g>`
       }
       return `${under}<g transform="scale(${tile}) translate(0 .5)" stroke-width="1" fill="none">${body}</g>${over}`
     },

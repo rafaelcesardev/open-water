@@ -54,3 +54,12 @@ test('colours: hex, rgb(a) and a few names; anything else throws instead of pain
   assert.deepEqual(parseColor('White'), [255, 255, 255, 1])
   assert.throws(() => parseColor('teal'), /teal/)
 })
+
+test('a point that is not a number is left out of the path, as on a canvas, not written into it', () => {
+  const p = new SvgPath()
+  p.moveTo(NaN, 1)
+  p.lineTo(2, 3)
+  p.quadraticCurveTo(NaN, 0, 4, 5)
+  p.lineTo(6, 7)
+  assert.equal(p.d, 'M2 3L6 7')
+})

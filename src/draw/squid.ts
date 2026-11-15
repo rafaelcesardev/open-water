@@ -125,7 +125,8 @@ export function drawSquid(ctx: Ctx, a: Animal, tile: number): void {
   // stalks keep to a tile to stay a line rather than a dotted trace.
   for (const side of [-1, 1]) {
     const mid = (i: number): number => {
-      const t = (frames[i]!.u - 0.33) / 0.67
+      // The first frame of the stalk can lie a hair before 0.33: never below 0, where the powers below go NaN.
+      const t = Math.max(0, (frames[i]!.u - 0.33) / 0.67)
       const spread = 3.2 + (3 + 8 * open) * Math.pow(t, 1.2)
       const flap = (4 + 7 * open) * Math.pow(t, 1.5) * Math.sin(2 * Math.PI * (phase - 1.3 * t + 0.3 * side))
       return side * spread + flap

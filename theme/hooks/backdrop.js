@@ -1434,7 +1434,7 @@ function drawSquid(ctx, a, tile) {
   ctx.lineCap = "round";
   for (const side of [-1, 1]) {
     const mid = (i) => {
-      const t = (frames[i].u - 0.33) / 0.67;
+      const t = Math.max(0, (frames[i].u - 0.33) / 0.67);
       const spread = 3.2 + (3 + 8 * open) * Math.pow(t, 1.2);
       const flap = (4 + 7 * open) * Math.pow(t, 1.5) * Math.sin(2 * Math.PI * (phase - 1.3 * t + 0.3 * side));
       return side * spread + flap;
@@ -1901,6 +1901,7 @@ var DRAW = {
 
 // src/svg.ts
 var num = (n) => String(Math.abs(n) < 10 ? Math.round(n * 10) / 10 : Math.round(n));
+var finite = (...v) => v.every(Number.isFinite);
 var frac = (n) => String(Math.round(n * 100) / 100);
 var SvgPath = class {
   constructor() {
@@ -1927,18 +1928,22 @@ var SvgPath = class {
     const p = this.polys[this.polys.length - 1];
     return [p[p.length - 2], p[p.length - 1]];
   }
+  // As the canvas does, a call with a point that is not a number is left out: one NaN must not blank the shape.
   moveTo(x, y) {
+    if (!finite(x, y)) return;
     this.parts.push(`M${num(x)} ${num(y)}`);
     this.start(x, y);
     this.open = true;
   }
   lineTo(x, y) {
+    if (!finite(x, y)) return;
     if (!this.open) return this.moveTo(x, y);
     this.parts.push(`L${num(x)} ${num(y)}`);
     this.to(x, y);
   }
   // A curve with no point to start from starts at its first control point, as the canvas does.
   quadraticCurveTo(cx, cy, x, y) {
+    if (!finite(cx, cy, x, y)) return;
     if (!this.open) this.moveTo(cx, cy);
     this.parts.push(`Q${num(cx)} ${num(cy)} ${num(x)} ${num(y)}`);
     const [x0, y0] = this.here;
@@ -1949,6 +1954,7 @@ var SvgPath = class {
     }
   }
   bezierCurveTo(c1x, c1y, c2x, c2y, x, y) {
+    if (!finite(c1x, c1y, c2x, c2y, x, y)) return;
     if (!this.open) this.moveTo(c1x, c1y);
     this.parts.push(`C${num(c1x)} ${num(c1y)} ${num(c2x)} ${num(c2y)} ${num(x)} ${num(y)}`);
     const [x0, y0] = this.here;
@@ -1973,6 +1979,7 @@ var SvgPath = class {
   /** As the canvas does: a line to its start (or a move, on a new path), then cubic curves, a quarter turn at most
    * each, so the same call always makes the same commands and a shape can move between two moments. */
   ellipse(x, y, rx, ry, rot, a0, a1, ccw = false) {
+    if (!finite(x, y, rx, ry, rot, a0, a1)) return;
     const TAU = Math.PI * 2;
     let span = a1 - a0;
     if (!ccw) span = span >= TAU ? TAU : (span % TAU + TAU) % TAU;
@@ -2103,8 +2110,7 @@ function animate(moments, step) {
 var GLYPHS = "$%tSX8@:;#S%X8tS";
 var SHADES = [1, 0.886, 0.776, 0.659];
 var GLYPH_INK = 0.227;
-var DEEP_DARK = "#171d24";
-var TINT = 0.3;
+var GLYPH_LIFT = 0.72;
 var CLEAR = 0.85;
 function rng(seed) {
   let a = seed >>> 0;
@@ -2355,16 +2361,22 @@ var RasterCtx = class extends SvgPath {
     this.box = [Infinity, Infinity, -Infinity, -Infinity];
   }
 };
-var apart2 = (p, q) => Math.max(Math.abs((p >> 16) - (q >> 16)), Math.abs((p >> 8 & 255) - (q >> 8 & 255)), Math.abs((p & 255) - (q & 255)));
+function apart2(p, q) {
+  const [lp, lq] = [p >>> 24, q >>> 24];
+  const colour = Math.max(Math.abs((p >> 16 & 255) - (q >> 16 & 255)), Math.abs((p >> 8 & 255) - (q >> 8 & 255)), Math.abs((p & 255) - (q & 255)));
+  return Math.max(colour * Math.max(lp, lq) / LEVELS, Math.abs(lp - lq) * 25);
+}
 var SAME = 14;
-function createMosaic(width, height, tile, water) {
+var LEVELS = 10;
+function waterStyle(dark, light) {
+  return `<style>.w{fill:${dark}}.ws{stroke:${dark}}.gl{fill-opacity:${1 - GLYPH_INK}}.ink{fill:#fff;fill-opacity:.2}.grid{stroke:#fff;stroke-opacity:.028}@media (prefers-color-scheme:light){.w{fill:${light}}.ws{stroke:${light}}.gl{fill-opacity:${GLYPH_LIFT}}.ink{fill:#000;fill-opacity:.12}.grid{stroke:#000;stroke-opacity:.05}}</style>`;
+}
+function createMosaic(width, height, tile) {
   const cols = Math.ceil(width / tile);
   const rows = Math.ceil(height / tile);
   const ctx = new RasterCtx(cols, rows, tile);
-  const [wr, wg, wb] = parseColor(water);
-  const [dr, dg, db] = parseColor(DEEP_DARK);
   const Q = 6;
-  const q = (v) => Math.max(0, Math.min(255, Math.round(v / Q) * Q));
+  const q = (v, step) => Math.max(0, Math.min(255, Math.round(v / step) * step));
   const table2 = tileTable();
   const span = 16 * tile;
   let shades = "";
@@ -2384,7 +2396,7 @@ function createMosaic(width, height, tile, water) {
   const rand = rng(99);
   let dashes = "";
   for (let i = 0; i < 120; i += 1) dashes += `M${Math.floor(rand() * cols) * tile + tile * 0.3} ${Math.floor(rand() * rows) * tile + tile * 0.45}h${tile * 0.4}v${tile * 0.1}h${-tile * 0.4}z`;
-  const under = `<defs><pattern id="p" width="${span}" height="${span}" patternUnits="userSpaceOnUse" fill="${water}">${shades}<g fill-opacity="${1 - GLYPH_INK}" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" font-size="${tile * 0.72}" text-anchor="middle" dominant-baseline="middle">${glyphs}</g><path d="${gaps}" stroke="${water}" stroke-width="${tile * 0.12}"/></pattern><pattern id="grid" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse"><path d="M0 0H${tile}M0 0V${tile}" stroke="#fff" stroke-opacity=".028" fill="none"/></pattern></defs><path fill="#fff" fill-opacity=".2" d="${dashes}"/>`;
+  const under = `<defs><pattern id="p" class="w" width="${span}" height="${span}" patternUnits="userSpaceOnUse">${shades}<g class="gl" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" font-size="${tile * 0.72}" text-anchor="middle" dominant-baseline="middle">${glyphs}</g><path class="ws" d="${gaps}" stroke-width="${tile * 0.12}"/></pattern><pattern id="grid" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse"><path class="grid" d="M0 0H${tile}M0 0V${tile}" fill="none"/></pattern></defs><path class="ink" d="${dashes}"/>`;
   const over = `<rect width="${width}" height="${height}" fill="url(#p)"/><rect width="${width}" height="${height}" fill="url(#grid)"/>`;
   const paths = (tiles) => {
     const byColour = /* @__PURE__ */ new Map();
@@ -2402,7 +2414,9 @@ function createMosaic(width, height, tile, water) {
         [px, py] = [x + n, y];
         k += n;
       }
-      out += `<path stroke="${c < 0 ? water : `#${c.toString(16).padStart(6, "0")}`}" d="${d}"/>`;
+      const level = c >>> 24;
+      const paint = c < 0 ? 'class="ws"' : `stroke="#${(c & 16777215).toString(16).padStart(6, "0")}"${level < LEVELS ? ` opacity="${level / LEVELS}"` : ""}`;
+      out += `<path ${paint} d="${d}"/>`;
     }
     return out;
   };
@@ -2412,30 +2426,31 @@ function createMosaic(width, height, tile, water) {
     shot: () => new Int32Array(cols * rows).fill(-1),
     /** Lights the tiles of the body just drawn into `ctx`, `depth` deep (0 at the surface to 1), over `shot`. */
     take(shot, depth) {
-      const tint = depth * TINT;
-      const alpha = 1 - depth * CLEAR;
+      const level = Math.max(1, Math.round((1 - depth * CLEAR) * LEVELS));
+      const step = Q * LEVELS / level;
       ctx.take((t, r, g, b) => {
-        const [tr, tg, tb] = [r + (dr - r) * tint, g + (dg - g) * tint, b + (db - b) * tint];
-        shot[t] = q(wr + (tr - wr) * alpha) << 16 | q(wg + (tg - wg) * alpha) << 8 | q(wb + (tb - wb) * alpha);
+        shot[t] = level << 24 | q(r, step) << 16 | q(g, step) << 8 | q(b, step);
       });
     },
     /** The moments as SVG markup inside the sea's `<svg>`: the first whole, each later one as what changed. */
     animate(shots, step) {
       const first = /* @__PURE__ */ new Map();
       shots[0].forEach((c, t) => {
-        if (c >= 0) first.set(t, c);
+        if (c !== -1) first.set(t, c);
       });
       let body = paths(first);
       const shown = Int32Array.from(shots[0]);
       for (let k = 1; k < shots.length; k += 1) {
         const changed = /* @__PURE__ */ new Map();
+        const clear = /* @__PURE__ */ new Map();
         shots[k].forEach((c, t) => {
           const was = shown[t];
-          if (c === was || c >= 0 && was >= 0 && apart2(c, was) <= SAME) return;
+          if (c === was || c !== -1 && was !== -1 && apart2(c, was) <= SAME) return;
           shown[t] = c;
           changed.set(t, c);
+          if (c !== -1 && was !== -1 && c >>> 24 < LEVELS) clear.set(t, -1);
         });
-        if (changed.size > 0) body += `<g visibility="hidden"><set attributeName="visibility" to="visible" begin="${Math.round(k * step * 100) / 100}s"/>${paths(changed)}</g>`;
+        if (changed.size > 0) body += `<g visibility="hidden"><set attributeName="visibility" to="visible" begin="${Math.round(k * step * 100) / 100}s"/>${paths(clear)}${paths(changed)}</g>`;
       }
       return `${under}<g transform="scale(${tile}) translate(0 .5)" stroke-width="1" fill="none">${body}</g>${over}`;
     }
@@ -2454,14 +2469,14 @@ var SMOOTH_FITS = ["white", "hammer", "tiger", "blacktip", "orca", "dolphin", "m
 function createBackdrop(o = {}) {
   const mosaic = (o.style ?? "mosaic") === "mosaic";
   const [width, height, seconds, limit] = [o.width ?? 2400, o.height ?? 1500, o.seconds ?? 1.5, o.limit ?? 131072];
-  const water = o.water ?? "#191919";
+  const [water, lightWater] = [o.water ?? "#191919", o.lightWater ?? "#dde6e9"];
   const sea = createSea(width, height);
   sea.atOnce = o.atOnce ?? (mosaic ? 4 : 1);
   const names = o.species ?? (mosaic ? KINDS.map((k) => k.name) : SMOOTH_FITS);
   sea.allowed = new Set(KINDS.map((k, i) => names.includes(k.name) ? i : -1).filter((i) => i >= 0));
   for (let t = 0; t < 6; t += STEP3) stepSea(sea, STEP3, MARGIN);
   const inOrder = () => [...sea.animals].sort((p, q) => q.depth - p.depth);
-  const tiles = createMosaic(width, height, o.cell ?? 10, water);
+  const tiles = createMosaic(width, height, o.cell ?? 10);
   const shoot = () => {
     const shot = tiles.shot();
     for (const a of inOrder()) {
@@ -2481,7 +2496,7 @@ function createBackdrop(o = {}) {
     }
     return root;
   };
-  const wrap = (body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid slice"><rect width="${width}" height="${height}" fill="${water}"/>${body}</svg>`;
+  const wrap = (body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid slice">${waterStyle(water, lightWater)}<rect class="w" width="${width}" height="${height}"/>${body}</svg>`;
   function stream(take, draw) {
     const queue = [];
     const [n, lead, spare] = [Math.round(seconds * RATE), Math.round(LEAD2 * RATE), Math.round(SPARE * RATE)];

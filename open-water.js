@@ -1450,7 +1450,7 @@ function drawSquid(ctx, a, tile) {
   ctx.lineCap = "round";
   for (const side of [-1, 1]) {
     const mid = (i) => {
-      const t = (frames[i].u - 0.33) / 0.67;
+      const t = Math.max(0, (frames[i].u - 0.33) / 0.67);
       const spread = 3.2 + (3 + 8 * open) * Math.pow(t, 1.2);
       const flap = (4 + 7 * open) * Math.pow(t, 1.5) * Math.sin(2 * Math.PI * (phase - 1.3 * t + 0.3 * side));
       return side * spread + flap;

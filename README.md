@@ -67,19 +67,61 @@ Opções:
 
 Com "reduzir movimento" ligado no sistema, mostra uma cena parada.
 
-## Tema do app Claude (protótipo)
+## Tema do Claude
 
-`theme/` é um mod do Claude Code que põe o mar atrás da conversa no app desktop e no celular, com as cores do app tiradas dele (só modo escuro). O app aceita como fundo um SVG sem script, redesenhado no máximo 10 vezes por segundo. Então o mod roda a simulação ele mesmo e, a cada 1,2 segundo, manda o trecho seguinte do mar como um SVG que se anima sozinho. Cada trecho já está pronto antes da troca, começa um décimo de segundo adiante (o tempo que o app leva para mostrá-lo) e traz 0,3 segundo a mais no fim, para continuar nadando se a troca atrasar. Continua ao vivo: cada trecho é simulado na hora.
+O mar do Open Water ao vivo atrás da conversa no app desktop do Claude e no celular, em mosaico, com as cores do app tiradas dele. Acompanha o modo do app: mar à noite no escuro, água clara no claro. No terminal e nos editores (VS Code, JetBrains) o tema não desenha nada.
 
-- **Mosaico** (padrão): sem canvas, cada corpo é pintado numa grade de amostras (`src/mosaic.ts`), dois por dois por ladrilho, e o ladrilho acende onde o corpo cobre a maior parte dele, como na página. O SVG traz os ladrilhos do primeiro momento e, até 20 vezes por segundo, só os que mudaram. Os tons, as letras e as frestas são uma camada parada por cima, na cor da água, então só aparecem sobre um ladrilho aceso, e o app só redesenha onde os ladrilhos mudam. Cabem todas as espécies; o tema usa até 5 de uma vez, sem a baleia-azul e o cardume, que são os que mais acendem ladrilhos; quando o trecho passa do limite do app (131.072 caracteres), ele manda menos momentos por segundo.
+### Instalar
+
+Precisa do Claude Code 2.1.275 ou mais novo.
+
+No app desktop: clique no **+** ao lado da caixa de mensagem, depois em **Plugins**, **Add marketplace**, digite `rafaelcesardev/open-water` e, em seguida, **Add plugin** no Open Water.
+
+No terminal, dentro de uma sessão do Claude Code:
+
+```
+/plugin install open-water --marketplace rafaelcesardev/open-water
+```
+
+Ele pergunta se pode adicionar o marketplace (responda `y`) e onde instalar (para você, em todos os projetos, ou só neste).
+
+Ou direto do shell:
+
+```bash
+claude plugin install open-water --marketplace rafaelcesardev/open-water
+```
+
+Depois de instalar, abra uma sessão nova no app: o tema entra quando a sessão começa.
+
+### Atualizar e remover
+
+```bash
+claude plugin marketplace update open-water   # traz a versão mais nova
+claude plugin uninstall open-water            # tira o tema; o app volta ao visual dele
+```
+
+### O que esperar
+
+- Até 5 animais de uma vez: os quatro tubarões, orca, golfinho, tartaruga, manta e lula-gigante. A baleia-azul e o cardume ficam de fora, porque são os que mais pesam para o app.
+- O mod roda a simulação no seu computador: uns 5% de um núcleo, em média.
+- Sem a luz da superfície (cáusticas).
+- O mar segue o modo claro ou escuro que o app passa para o fundo (`prefers-color-scheme`); o resto das cores do app segue o modo dele direto.
+
+### Como funciona
+
+O app aceita como fundo um SVG sem script, redesenhado no máximo 10 vezes por segundo. Então o mod (`theme/`) roda a simulação ele mesmo e, a cada segundo, manda o trecho seguinte do mar como um SVG que se anima sozinho. Cada trecho já está pronto antes da troca, começa um décimo de segundo adiante (o tempo que o app leva para mostrá-lo) e traz 0,3 segundo a mais no fim, para continuar nadando se a troca atrasar. Continua ao vivo: cada trecho é simulado na hora.
+
+- **Mosaico** (padrão): sem canvas, cada corpo é pintado numa grade de amostras (`src/mosaic.ts`), dois por dois por ladrilho, e o ladrilho acende onde o corpo cobre a maior parte dele, como na página. O SVG traz os ladrilhos do primeiro momento e, até 20 vezes por segundo, só os que mudaram. Os tons, as letras e as frestas são uma camada parada por cima, na cor da água, então só aparecem sobre um ladrilho aceso, e o app só redesenha onde os ladrilhos mudam. Um animal fundo é um ladrilho meio transparente sobre a água, então a mesma imagem serve aos dois modos. Quando um trecho passa do limite do app (131.072 caracteres), ele manda menos momentos por segundo.
 - **Liso** (`style: 'smooth'`): o corpo desenhado, movido entre amostras por SMIL. Um animal por vez, e só os que cabem no limite (os quatro tubarões, orca, golfinho e manta).
 
-Por enquanto sem cáusticas.
+### Desenvolver
 
 ```bash
 npm run theme                       # gera theme/hooks/backdrop.js a partir de src/backdrop.ts
-claude --plugin-dir theme           # ou CLAUDE_CODE_PLUGIN_DIRS=theme
+claude --plugin-dir theme           # uma sessão com o tema desta pasta; ou CLAUDE_CODE_PLUGIN_DIRS=theme
 ```
+
+O `theme/hooks/backdrop.js` vai no repositório, já gerado: quem instala não precisa de Node nem de Bun.
 
 ## Código
 

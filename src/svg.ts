@@ -8,6 +8,7 @@ export type El = { tag: string; attrs: Record<string, string>; kids: El[] }
 // Whole units where it is big (a unit is under a pixel), a tenth where it is small (an eye, a line's width).
 const num = (n: number): string => String(Math.abs(n) < 10 ? Math.round(n * 10) / 10 : Math.round(n))
 // Hundredths: also for times, as samples come 0.05 s apart.
+const finite = (...v: number[]): boolean => v.every(Number.isFinite)
 const frac = (n: number): string => String(Math.round(n * 100) / 100)
 
 /** A path being traced, as SVG path data and as flat outlines (each subpath its points, curves cut into lines, for
@@ -36,18 +37,22 @@ export class SvgPath {
     const p = this.polys[this.polys.length - 1]!
     return [p[p.length - 2]!, p[p.length - 1]!]
   }
+  // As the canvas does, a call with a point that is not a number is left out: one NaN must not blank the shape.
   moveTo(x: number, y: number): void {
+    if (!finite(x, y)) return
     this.parts.push(`M${num(x)} ${num(y)}`)
     this.start(x, y)
     this.open = true
   }
   lineTo(x: number, y: number): void {
+    if (!finite(x, y)) return
     if (!this.open) return this.moveTo(x, y)
     this.parts.push(`L${num(x)} ${num(y)}`)
     this.to(x, y)
   }
   // A curve with no point to start from starts at its first control point, as the canvas does.
   quadraticCurveTo(cx: number, cy: number, x: number, y: number): void {
+    if (!finite(cx, cy, x, y)) return
     if (!this.open) this.moveTo(cx, cy)
     this.parts.push(`Q${num(cx)} ${num(cy)} ${num(x)} ${num(y)}`)
     const [x0, y0] = this.here
@@ -58,6 +63,7 @@ export class SvgPath {
     }
   }
   bezierCurveTo(c1x: number, c1y: number, c2x: number, c2y: number, x: number, y: number): void {
+    if (!finite(c1x, c1y, c2x, c2y, x, y)) return
     if (!this.open) this.moveTo(c1x, c1y)
     this.parts.push(`C${num(c1x)} ${num(c1y)} ${num(c2x)} ${num(c2y)} ${num(x)} ${num(y)}`)
     const [x0, y0] = this.here
@@ -82,6 +88,7 @@ export class SvgPath {
   /** As the canvas does: a line to its start (or a move, on a new path), then cubic curves, a quarter turn at most
    * each, so the same call always makes the same commands and a shape can move between two moments. */
   ellipse(x: number, y: number, rx: number, ry: number, rot: number, a0: number, a1: number, ccw = false): void {
+    if (!finite(x, y, rx, ry, rot, a0, a1)) return
     const TAU = Math.PI * 2
     let span = a1 - a0
     if (!ccw) span = span >= TAU ? TAU : ((span % TAU) + TAU) % TAU

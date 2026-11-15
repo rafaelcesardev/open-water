@@ -1,4 +1,4 @@
-// Open Water as the Claude app's look: the sea at night behind the conversation, live, and the app's colours taken
+// Open Water as the Claude app's look: the sea behind the conversation, live, at night or by day as the app is, and the app's colours taken
 // from it. The sea is simulated here, a few seconds at a time, and each stretch is sent to the app as one SVG that
 // plays itself (backdrop.js, bundled from src/backdrop.ts by `npm run theme`).
 
@@ -7,11 +7,23 @@ import type { Register, ThemeSetArgs } from 'claude-code'
 import { createBackdrop } from './backdrop.js'
 import { makeColors } from './make-colors.js'
 
-// The water at night, a little bluer in the panels, as the deep fades into it; the page's own accent.
+// The water at night, a little bluer in the panels, as the deep fades into it; by day the page's pale water, the
+// cards lighter than it. The page's own accents, its night ones for the hue.
 const { theme, problems } = makeColors({
   label: 'Open Water',
-  only: 'dark',
   roles: { accent: '#8fd3e8', danger: '#e07a6e', success: '#7ee0a1', warning: '#e0b86e', pro: '#b9a3e8' },
+  light: {
+    gray: {
+      anchors: {
+        'surface-0': '#e3eaed',
+        'surface-1': '#edf2f4',
+        'surface-2': '#f6f9fa',
+        'text-primary': '#1a2024',
+        'text-secondary': '#3d4a51',
+        'text-muted': '#55626a',
+      },
+    },
+  },
   dark: {
     gray: {
       anchors: {
@@ -29,15 +41,16 @@ const { theme, problems } = makeColors({
 
 const SCENE = 'open-water'
 // A stretch of sea a send: shorter gives the tiles more room a second, so the mosaic moves at more samples a second.
-const SECONDS = 1.2
+const SECONDS = 1
 /** Up to five animals at once, and not the blue whale or the school: they light the most tiles, so the app has the
  * least to redraw. */
 const AT_ONCE = 5
 const SPECIES = ['white', 'hammer', 'tiger', 'blacktip', 'orca', 'dolphin', 'turtle', 'manta', 'squid']
-const LOOK: ThemeSetArgs = { colors: theme, backdrop: { scene: SCENE, glass: { blur: 8, tint: '#15191e', opacity: 0.6 } } }
+// The panels take the look's own surface colour in each mode: no tint of ours, which would be one mode's.
+const LOOK: ThemeSetArgs = { colors: theme, backdrop: { scene: SCENE, glass: { blur: 8, opacity: 0.6 } } }
 
 export const register: Register = on => {
-  const sea = createBackdrop({ seconds: SECONDS, atOnce: AT_ONCE, species: SPECIES, water: '#191919' })
+  const sea = createBackdrop({ seconds: SECONDS, atOnce: AT_ONCE, species: SPECIES })
   let svg = sea.next()
   // The next stretch, made ahead, so a swap never waits for the sea to be worked out.
   let ready = sea.next()
