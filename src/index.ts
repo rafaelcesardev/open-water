@@ -139,7 +139,7 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     sea.allowed = new Set(KINDS.flatMap((k, i) => (settings.species.includes(k.name) ? [i] : [])))
   }
 
-  /** A new sea the size of the window: on start, on resize, on a new zoom. */
+  /** A new sea the size of the window, at the start. */
   function layout(): void {
     setWidth(normalWidth())
     const dpr = Math.min(2, window.devicePixelRatio || 1)
@@ -152,6 +152,25 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     rules()
     water()
     if (settings.observe !== null) observe(settings.observe)
+  }
+
+  /**
+   * The window changed size: the sea keeps its width in units, and only gains or loses water above and below, about
+   * its middle; every animal stays where it was. Nothing starts over. A watched animal's camera just frames the new
+   * shape.
+   */
+  function resize(): void {
+    const dpr = Math.min(2, window.devicePixelRatio || 1)
+    const width = Math.round(Math.max(1, host.clientWidth) * dpr)
+    const height = Math.round(Math.max(1, host.clientHeight) * dpr)
+    if (width === canvas.width && height === canvas.height) return
+    canvas.width = width
+    canvas.height = height
+    scale = width / seaWidth
+    const depth = Math.round(height / scale)
+    shift(sea, 0, (depth - sea.h) / 2)
+    sea.h = depth
+    water()
   }
 
   /**
@@ -372,14 +391,9 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     frame = requestAnimationFrame(tick)
   }
 
-  let resizing = 0
   const observer = new ResizeObserver(() => {
-    clearTimeout(resizing)
-    resizing = window.setTimeout(() => {
-      layout()
-      settle()
-      paint()
-    }, 150)
+    resize()
+    paint()
   })
   observer.observe(host)
 
@@ -415,7 +429,6 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
   return () => {
     cancelAnimationFrame(frame)
     observer.disconnect()
-    clearTimeout(resizing)
     canvas.remove()
     panel?.remove()
   }

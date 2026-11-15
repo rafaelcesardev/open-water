@@ -2375,6 +2375,19 @@ function mountSharkNight(host, options = {}) {
     water();
     if (settings.observe !== null) observe(settings.observe);
   }
+  function resize() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const width = Math.round(Math.max(1, host.clientWidth) * dpr);
+    const height = Math.round(Math.max(1, host.clientHeight) * dpr);
+    if (width === canvas.width && height === canvas.height) return;
+    canvas.width = width;
+    canvas.height = height;
+    scale = width / seaWidth;
+    const depth = Math.round(height / scale);
+    shift(sea, 0, (depth - sea.h) / 2);
+    sea.h = depth;
+    water();
+  }
   function rezoom() {
     const width = normalWidth();
     const depth = Math.round(canvas.height * width / canvas.width);
@@ -2555,14 +2568,9 @@ function mountSharkNight(host, options = {}) {
     paint();
     frame = requestAnimationFrame(tick);
   }
-  let resizing = 0;
   const observer = new ResizeObserver(() => {
-    clearTimeout(resizing);
-    resizing = window.setTimeout(() => {
-      layout();
-      settle();
-      paint();
-    }, 150);
+    resize();
+    paint();
   });
   observer.observe(host);
   function apply(patch) {
@@ -2592,7 +2600,6 @@ function mountSharkNight(host, options = {}) {
   return () => {
     cancelAnimationFrame(frame);
     observer.disconnect();
-    clearTimeout(resizing);
     canvas.remove();
     panel?.remove();
   };
