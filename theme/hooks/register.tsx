@@ -9,7 +9,7 @@ import { makeColors } from './make-colors.js'
 
 // The water at night, a little bluer in the panels, as the deep fades into it; by day the page's pale water, the
 // cards lighter than it. The page's own accents, its night ones for the hue.
-const { theme, problems } = makeColors({
+const { problems } = makeColors({
   label: 'Open Water',
   roles: { accent: '#8fd3e8', danger: '#e07a6e', success: '#7ee0a1', warning: '#e0b86e', pro: '#b9a3e8' },
   light: {
@@ -46,8 +46,8 @@ const SECONDS = 1
  * least to redraw. */
 const AT_ONCE = 5
 const SPECIES = ['white', 'hammer', 'tiger', 'blacktip', 'orca', 'dolphin', 'turtle', 'manta', 'squid']
-// The panels take the look's own surface colour in each mode: no tint of ours, which would be one mode's.
-const LOOK: ThemeSetArgs = { colors: theme, backdrop: { scene: SCENE, glass: { blur: 8, opacity: 0.6 } } }
+// Only the sea is ours: the app's own colours stay as they are, in both modes.
+const LOOK: ThemeSetArgs = { backdrop: { scene: SCENE, glass: { blur: 8, opacity: 0.6 } } }
 
 export const register: Register = on => {
   const sea = createBackdrop({ seconds: SECONDS, atOnce: AT_ONCE, species: SPECIES })
