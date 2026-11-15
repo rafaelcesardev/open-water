@@ -109,7 +109,7 @@ claude plugin uninstall open-water            # tira o tema; o app volta ao visu
 
 ### O que esperar
 
-- Até 4 animais de uma vez: os quatro tubarões, orca, golfinho, tartaruga, manta e lula-gigante. A baleia-azul e o cardume ficam de fora, porque são os que mais pesam para o app.
+- Até 3 animais de uma vez: os quatro tubarões, orca, golfinho, tartaruga, manta e lula-gigante. A baleia-azul e o cardume ficam de fora, porque são os que mais pesam para o app.
 - O mod roda a simulação no seu computador: uns 5% de um núcleo, em média.
 - Sem a luz da superfície (cáusticas), sem a grade e sem os tracinhos da página.
 - O mar segue o modo claro ou escuro que o app passa para o fundo (`prefers-color-scheme`), na cor de fundo do app em cada um (`#191919` no escuro, `#f9f9f7` no claro). Os painéis ficam sem véu e sem desfoque, então a tela fica de um tom só.

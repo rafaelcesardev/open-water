@@ -43,9 +43,9 @@ const SCENE = 'open-water'
 // A stretch of sea a send. The app shows each send in a frame of its own, made anew at every swap, so fewer swaps
 // is fewer chances to stutter; two seconds still fits the app's limit at ten samples a second.
 const SECONDS = 2
-/** Up to four animals at once, and not the blue whale or the school: they light the most tiles, so the app has the
+/** Up to three animals at once, and not the blue whale or the school: they light the most tiles, so the app has the
  * least to redraw. */
-const AT_ONCE = 4
+const AT_ONCE = 3
 const SPECIES = ['white', 'hammer', 'tiger', 'blacktip', 'orca', 'dolphin', 'turtle', 'manta', 'squid']
 // The water is the colour of the app's own panels in each mode, so a panel over it (60% of its colour, glass below)
 // comes out that same colour and the window is one even ground, as with no theme. By night it is measured off the

@@ -109,7 +109,7 @@ claude plugin uninstall open-water            # removes the theme; the app goes 
 
 ### What to expect
 
-- Up to 4 animals at once: the four sharks, orca, dolphin, turtle, manta and giant squid. The blue whale and the school are left out, as they weigh the most on the app.
+- Up to 3 animals at once: the four sharks, orca, dolphin, turtle, manta and giant squid. The blue whale and the school are left out, as they weigh the most on the app.
 - The mod runs the simulation on your computer: about 5% of one core, on average.
 - No surface light (caustics), no grid and no dashes of the page.
 - The sea follows the light or dark mode the app passes to the background (`prefers-color-scheme`), in the app's background colour for each (`#191919` dark, `#f9f9f7` light). The panels have no veil and no blur, so the screen is one even tone.
