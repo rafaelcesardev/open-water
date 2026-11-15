@@ -11,6 +11,7 @@
 // in place as an animal passes. `style: 'smooth'` shows the drawn animals themselves.
 
 import { DRAW } from './draw/all.ts'
+import { CLEAR, DEEP_DARK, DEEP_LIGHT, GLYPH_INK, GLYPH_LIFT, TINT, rng, tileTable } from './mosaic.ts'
 import { mountPanel, type Settings } from './panel.ts'
 import { KINDS, createSea, depthOf, discsOf, middleOf, place, shift, spineOf, stepSea, type Animal, type Kind, type Point, type Sea } from './sim.ts'
 
@@ -38,17 +39,10 @@ export type Options = {
 }
 
 const LIGHT = '#dde6e9'
-/** The water a deep animal fades into, seen through it from above: about the water's own colour, a little bluer, so
- * the deeper the more see-through it looks, at the third level all but gone. */
-const DEEP_DARK = '#171d24'
-const DEEP_LIGHT = '#c9d8de'
-/** How far the deepest fade into it, and how blurred they are, in sea units (the smooth style only). */
+/** How far the deepest fade into the deep water (DEEP_DARK, DEEP_LIGHT: mosaic.ts), and how blurred they are, in sea
+ * units (the smooth style only). */
 const FADE = 0.8
 const BLUR = 7
-/** The mosaic: the deepest only tinted toward it a little, and their tiles this much see-through instead (its tiles
- * take each a shade of their own, which would darken a faded colour back out of the water). */
-const TINT = 0.3
-const CLEAR = 0.85
 /** Caustics: how bright on an animal at the surface, by day and by night; and the two nets of them, each as its
  * scale and its drift in units a second, crossing so the light shimmers. */
 const CAUSTIC_DAY = 0.26
@@ -59,41 +53,13 @@ const NETS: [number, number, number][] = [
 ]
 const SAVED = 'open-water:settings'
 
-const GLYPHS = '$%tSX8@:;#S%X8tS'
-const SHADES = [1, 0.886, 0.776, 0.659]
-const GLYPH_INK = 0.227
-const GLYPH_LIFT = 0.72
 /** Seconds of sea a step of the simulation covers: one a frame at 60 frames a second. */
 const STEP = 1 / 60
 /** Units kept between bodies (the simulation's margin). */
 const MARGIN = 20
 
-function rng(seed: number): () => number {
-  let a = seed >>> 0
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0
-    let t = a
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
 /** A colour in whole numbers: what the browser would round to anyway, and far quicker for it to write and read. */
 const rgb = (r: number, g: number, b: number): string => `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`
-
-/** The mosaic's tiles: 16 by 16 of slightly different brightness, most with a glyph, repeated across the sea. */
-function tileTable(): { shade: number[]; glyph: string[] } {
-  const rand = rng(7)
-  const shade: number[] = []
-  const glyph: string[] = []
-  for (let i = 0; i < 256; i += 1) {
-    const r = rand()
-    shade.push(SHADES[r < 0.4 ? 0 : r < 0.7 ? 1 : r < 0.9 ? 2 : 3]!)
-    glyph.push(rand() < 0.86 ? GLYPHS[Math.floor(rand() * GLYPHS.length)]! : '')
-  }
-  return { shade, glyph }
-}
 
 /**
  * Caustic light, as the surface's ripples focus the sun or the moon on whatever lies below: a net of bright lines
