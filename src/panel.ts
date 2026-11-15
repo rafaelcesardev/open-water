@@ -258,6 +258,7 @@ export function mountPanel(
     <div class="panel glass" id="panel" role="region" aria-label="Controles do Shark Night">
       <header>
         <div class="title"><h1>Shark Night</h1><div class="status" aria-live="polite"><span class="pulse"></span><span data-status></span></div></div>
+        <button type="button" class="icon" data-theme-toggle></button>
         <button type="button" class="icon" data-pause></button>
         <button type="button" class="icon" data-collapse aria-label="Esconder controles (H)" title="Esconder (H)" aria-controls="panel">${ICONS.hide}</button>
       </header>
@@ -290,7 +291,6 @@ export function mountPanel(
 
       <div class="shared">
         <div class="section">Visualização</div>
-        <div class="block pair"><span>Tema</span>${seg('theme', 'Tema', [['dark', `${ICONS.moon}Escuro`], ['light', `${ICONS.sun}Claro`]])}</div>
         <div class="block pair"><span>Estilo</span>${seg('style', 'Estilo', [['mosaic', 'Mosaico'], ['smooth', 'Liso']])}</div>
         <div class="block">
           <div class="label"><label for="zoomOut">Distância</label><span class="hint" data-value="zoomOut"></span></div>
@@ -366,7 +366,12 @@ export function mountPanel(
     $<HTMLButtonElement>('[data-more]').disabled = settings.atOnce >= 8
     for (const b of $$<HTMLButtonElement>('[data-kind]')) b.setAttribute('aria-pressed', String(settings.species.includes(b.dataset.kind as Name)))
     for (const b of $$<HTMLButtonElement>('[data-speed]')) b.setAttribute('aria-pressed', String(Number(b.dataset.speed) === settings.speed))
-    for (const b of $$<HTMLButtonElement>('[data-theme]')) b.setAttribute('aria-pressed', String(b.dataset.theme === settings.theme))
+    // Shows where it takes you: the sun on the night sea, the moon in pale water.
+    const theme = $<HTMLButtonElement>('[data-theme-toggle]')
+    const toLight = settings.theme === 'dark'
+    theme.innerHTML = toLight ? ICONS.sun : ICONS.moon
+    theme.setAttribute('aria-label', toLight ? 'Tema claro' : 'Tema escuro')
+    theme.title = toLight ? 'Tema claro' : 'Tema escuro'
     for (const b of $$<HTMLButtonElement>('[data-style]')) b.setAttribute('aria-pressed', String(b.dataset.style === settings.style))
     for (const b of $$<HTMLButtonElement>('[data-watch]')) b.setAttribute('aria-pressed', String(b.dataset.watch === settings.observe))
     if (settings.observe !== null) {
@@ -393,7 +398,7 @@ export function mountPanel(
     } else if (d.watch !== undefined) watch(d.watch as Name)
     else if (d.step !== undefined) step(Number(d.step))
     else if (d.speed !== undefined) set({ speed: Number(d.speed) })
-    else if (d.theme !== undefined) set({ theme: d.theme as Settings['theme'] })
+    else if (b.hasAttribute('data-theme-toggle')) set({ theme: settings.theme === 'dark' ? 'light' : 'dark' })
     else if (d.style !== undefined) set({ style: d.style as Settings['style'] })
     else if (b.hasAttribute('data-pause')) set({ paused: !settings.paused })
     else if (b.hasAttribute('data-less')) set({ atOnce: Math.max(1, settings.atOnce - 1) })

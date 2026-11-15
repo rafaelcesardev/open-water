@@ -106,31 +106,31 @@ var shark = { plan: "shark", trunk: 0.8, sway: 0.05, surge: 0, whim: 1, stay: [3
 var cetacean = { plan: "cetacean", widest: 0, snout: 0, fin: 0, trunk: 0.9, sway: 4e-3, surge: 0, stay: [25, 80] };
 var KINDS = [
   // Great white, 4.5 m: heavy and spindle-shaped, a rounded conical snout, long sickle pectorals.
-  { ...shark, name: "white", length: 4.5 * M, girth: 40, widest: 0.33, snout: 0.62, fin: 83, reach: 125, speed: 62, beat: 2.6, turn: 0.6, sprint: 2.3, prey: ["blacktip", "dolphin", "turtle"] },
+  { ...shark, name: "white", length: 4.5 * M, girth: 40, widest: 0.33, snout: 0.62, fin: 83, reach: 125, speed: 62, beat: 2.6, turn: 0.6, sprint: 2.3, prey: ["blacktip", "dolphin", "turtle"], depth: [0.2, 0.65] },
   // Great hammerhead, 4 m: the cephalofoil on a body already thick right behind it, short pectorals.
-  { ...shark, name: "hammer", length: 4 * M, girth: 24, widest: 0.34, snout: 0.5, fin: 44, reach: 80, speed: 86, beat: 2, turn: 0.6, sprint: 2.3, hammer: true, prey: ["blacktip", "jacks"] },
+  { ...shark, name: "hammer", length: 4 * M, girth: 24, widest: 0.34, snout: 0.5, fin: 44, reach: 80, speed: 86, beat: 2, turn: 0.6, sprint: 2.3, hammer: true, prey: ["blacktip", "jacks"], depth: [0.3, 0.75] },
   // Tiger, 3.8 m: a broad blunt head, almost square from above, dark bars across the back. The turtles' hunter.
-  { ...shark, name: "tiger", length: 3.8 * M, girth: 27, widest: 0.3, snout: 0.5, fin: 53, reach: 85, speed: 74, beat: 2.2, turn: 0.6, sprint: 2.3, prey: ["turtle", "blacktip", "jacks"] },
+  { ...shark, name: "tiger", length: 3.8 * M, girth: 27, widest: 0.3, snout: 0.5, fin: 53, reach: 85, speed: 74, beat: 2.2, turn: 0.6, sprint: 2.3, prey: ["turtle", "blacktip", "jacks"], depth: [0.2, 0.7] },
   // Blacktip, 1.6 m: slender and quick, a rounded snout, black-tipped fins.
-  { ...shark, name: "blacktip", length: 1.6 * M, girth: 10, widest: 0.32, snout: 0.6, fin: 23, reach: 36, speed: 100, beat: 0.9, turn: 0.6, sprint: 2.3, whim: 1.3, prey: [] },
+  { ...shark, name: "blacktip", length: 1.6 * M, girth: 10, widest: 0.32, snout: 0.6, fin: 23, reach: 36, speed: 100, beat: 0.9, turn: 0.6, sprint: 2.3, whim: 1.3, prey: [], depth: [0.1, 0.5] },
   // Blue whale, 24 m: long and slender, a broad flat U-shaped head, a small fin far back, flukes a quarter its
   // length across. It barely turns; it passes through.
-  { ...cetacean, name: "blue", length: 24 * M, girth: 0.07 * 24 * M, profile: [[0, 0.45], [0.05, 0.78], [0.15, 0.93], [0.35, 1], [0.6, 0.82], [0.8, 0.42], [0.9, 0.18]], reach: 330, speed: 128, beat: 6, turn: 0.8, sprint: 1.4, whim: 0.2, stay: [4, 14], prey: [] },
+  { ...cetacean, name: "blue", length: 24 * M, girth: 0.07 * 24 * M, profile: [[0, 0.45], [0.05, 0.78], [0.15, 0.93], [0.35, 1], [0.6, 0.82], [0.8, 0.42], [0.9, 0.18]], reach: 330, speed: 128, beat: 6, turn: 0.8, sprint: 1.4, whim: 0.2, stay: [4, 14], prey: [], depth: [0.05, 0.3] },
   // Orca, 7 m: robust, a blunt rounded head, broad paddle flippers.
-  { ...cetacean, name: "orca", length: 7 * M, girth: 0.09 * 7 * M, profile: [[0, 0.4], [0.06, 0.8], [0.25, 1], [0.5, 0.9], [0.75, 0.45], [0.9, 0.17]], reach: 135, speed: 120, beat: 1.6, turn: 0.45, sprint: 2.5, whim: 1.2, prey: ["white", "tiger", "hammer", "blacktip", "dolphin", "manta"] },
+  { ...cetacean, name: "orca", length: 7 * M, girth: 0.09 * 7 * M, profile: [[0, 0.4], [0.06, 0.8], [0.25, 1], [0.5, 0.9], [0.75, 0.45], [0.9, 0.17]], reach: 135, speed: 120, beat: 1.6, turn: 0.45, sprint: 2.5, whim: 1.2, prey: ["white", "tiger", "hammer", "blacktip", "dolphin", "manta"], depth: [0.05, 0.4] },
   // Bottlenose dolphin, 2.7 m: a short beak before the melon, small pointed flippers. Quick and restless.
-  { ...cetacean, name: "dolphin", length: 2.7 * M, girth: 0.093 * 2.7 * M, profile: [[0, 0.1], [0.05, 0.28], [0.09, 0.6], [0.3, 1], [0.55, 0.85], [0.78, 0.38], [0.9, 0.15]], reach: 50, speed: 140, beat: 0.8, turn: 0.3, sprint: 2.5, whim: 2.5, prey: ["jacks"] },
+  { ...cetacean, name: "dolphin", length: 2.7 * M, girth: 0.093 * 2.7 * M, profile: [[0, 0.1], [0.05, 0.28], [0.09, 0.6], [0.3, 1], [0.55, 0.85], [0.78, 0.38], [0.9, 0.15]], reach: 50, speed: 140, beat: 0.8, turn: 0.3, sprint: 2.5, whim: 2.5, prey: ["jacks"], depth: [0, 0.35] },
   // Green sea turtle, 1.2 m: an oval shell, a small head, long front flippers it flies with, stroke and glide.
-  { name: "turtle", plan: "turtle", length: 1.2 * M, girth: 32, widest: 0, snout: 0, fin: 0, profile: [[0, 0.25], [0.1, 0.32], [0.17, 0.8], [0.42, 1], [0.7, 0.75], [0.88, 0.3], [1, 0.05]], reach: 64, speed: 48, beat: 2.4, turn: 0.5, trunk: 1, sway: 0, surge: 0.35, sprint: 3, whim: 0.8, stay: [30, 80], prey: [] },
+  { name: "turtle", plan: "turtle", length: 1.2 * M, girth: 32, widest: 0, snout: 0, fin: 0, profile: [[0, 0.25], [0.1, 0.32], [0.17, 0.8], [0.42, 1], [0.7, 0.75], [0.88, 0.3], [1, 0.05]], reach: 64, speed: 48, beat: 2.4, turn: 0.5, trunk: 1, sway: 0, surge: 0.35, sprint: 3, whim: 0.8, stay: [30, 80], prey: [], depth: [0, 0.35] },
   // Oceanic manta, 5.5 m across: a wide rigid disc, the horn-like cephalic fins in front, a short whip tail. Its
   // wings beat slowly, a wave running back along them.
-  { name: "manta", plan: "ray", length: 4.1 * M, girth: 2.75 * M, widest: 0, snout: 0, fin: 0, profile: [[0, 0.4], [0.06, 0.45], [0.33, 1], [0.58, 0.12], [0.63, 0.04], [1, 0.02]], reach: 2.75 * M + 10, speed: 76, beat: 3, turn: 0.6, trunk: 1, sway: 0.01, surge: 0.12, sprint: 1.7, whim: 0.7, stay: [30, 80], prey: [] },
+  { name: "manta", plan: "ray", length: 4.1 * M, girth: 2.75 * M, widest: 0, snout: 0, fin: 0, profile: [[0, 0.4], [0.06, 0.45], [0.33, 1], [0.58, 0.12], [0.63, 0.04], [1, 0.02]], reach: 2.75 * M + 10, speed: 76, beat: 3, turn: 0.6, trunk: 1, sway: 0.01, surge: 0.12, sprint: 1.7, whim: 0.7, stay: [30, 80], prey: [], depth: [0.05, 0.35] },
   // Giant squid, 8 m with its feeding tentacles: a 2 m mantle with small fins at its tip, huge eyes, eight arms
   // trailing and the two long tentacles beyond. It jets mantle first, in pulses.
-  { name: "squid", plan: "squid", length: 8 * M, girth: 22, widest: 0, snout: 0, fin: 0, profile: [[0, 0.35], [0.03, 1.1], [0.07, 0.8], [0.15, 1], [0.25, 0.9], [0.3, 1.05], [0.36, 0.85], [0.45, 1], [0.52, 0.5], [0.6, 0.18], [1, 0.12]], reach: 42, speed: 40, beat: 2.5, turn: 0.3, trunk: 1, sway: 0.03, surge: 0.6, sprint: 2.5, whim: 0.5, stay: [25, 60], prey: [] },
+  { name: "squid", plan: "squid", length: 8 * M, girth: 22, widest: 0, snout: 0, fin: 0, profile: [[0, 0.35], [0.03, 1.1], [0.07, 0.8], [0.15, 1], [0.25, 0.9], [0.3, 1.05], [0.36, 0.85], [0.45, 1], [0.52, 0.5], [0.6, 0.18], [1, 0.12]], reach: 42, speed: 40, beat: 2.5, turn: 0.3, trunk: 1, sway: 0.03, surge: 0.6, sprint: 2.5, whim: 0.5, stay: [25, 60], prey: [], depth: [0.55, 0.85] },
   // A school of bigeye trevally, 60 cm each, the silver school of every drone shot from above: they keep together and
   // go one way; it parts round anything big and closes again.
-  { name: "jacks", plan: "school", length: 0.6 * M, girth: 4, widest: 0, snout: 0, fin: 0, reach: 260, speed: 55, beat: 0.5, turn: 3.5, trunk: 1, sway: 0.1, surge: 0, sprint: 3, whim: 1, stay: [30, 70], prey: [] }
+  { name: "jacks", plan: "school", length: 0.6 * M, girth: 4, widest: 0, snout: 0, fin: 0, reach: 260, speed: 55, beat: 0.5, turn: 3.5, trunk: 1, sway: 0.1, surge: 0, sprint: 3, whim: 1, stay: [30, 70], prey: [], depth: [0.15, 0.5] }
 ];
 var WIDTH = 1600;
 function setWidth(width) {
@@ -221,11 +221,12 @@ function tailOf(a) {
 function createSea(h) {
   return { h, animals: [], next: 0, gone: -1, chases: 0, atOnce: 4, allowed: new Set(KINDS.map((_, i) => i)) };
 }
+var deepIn = (k, random) => k.depth[0] + random() * (k.depth[1] - k.depth[0]);
 function make(kind, x, y, heading, to, random) {
   const k = KINDS[kind];
   const trail = [];
   for (let back = STEP; back <= k.length * 1.25; back += STEP) trail.push({ x: x - Math.cos(heading) * back, y: y - Math.sin(heading) * back });
-  const a = { kind, x, y, heading, curve: 0, speed: k.speed, pace: 1, paceFor: 0, tight: 0, way: 0, wayFrom: 0, mode: "enter", modeFor: 0, prey: void 0, rest: 8 + random() * 12, to, stay: k.stay[0] + random() * (k.stay[1] - k.stay[0]), age: 0, seen: false, swum: random() * 500, trail, fish: [] };
+  const a = { kind, x, y, heading, curve: 0, speed: k.speed, pace: 1, paceFor: 0, tight: 0, way: 0, wayFrom: 0, mode: "enter", modeFor: 0, prey: void 0, rest: 8 + random() * 12, to, stay: k.stay[0] + random() * (k.stay[1] - k.stay[0]), age: 0, seen: false, swum: random() * 500, trail, fish: [], depth: deepIn(k, random), dive: deepIn(k, random) };
   if (k.plan === "school") {
     for (let i = 0; i < 160; i += 1) {
       const back = Math.sqrt(random()) * 380;
@@ -450,6 +451,9 @@ function stepSea(sea, dt, tile, random = Math.random) {
     } else {
       s.way = 0;
     }
+    if (random() < 0.06 * dt) s.dive = deepIn(k, random);
+    if (s.mode === "chase" && s.prey !== void 0) s.dive = s.prey.depth;
+    s.depth += clamp(s.dive - s.depth, -0.03 * dt, 0.03 * dt);
     const want = k.speed * s.pace;
     s.speed += (want - s.speed) * (1 - Math.exp(-dt / (want > s.speed ? 0.3 : 1)));
     const ease = s.speed * dt / (tightest * Math.max(k.length * 0.15, tightest * 0.3));
@@ -2122,6 +2126,7 @@ function mountPanel(host, settings, change, inView) {
     <div class="panel glass" id="panel" role="region" aria-label="Controles do Shark Night">
       <header>
         <div class="title"><h1>Shark Night</h1><div class="status" aria-live="polite"><span class="pulse"></span><span data-status></span></div></div>
+        <button type="button" class="icon" data-theme-toggle></button>
         <button type="button" class="icon" data-pause></button>
         <button type="button" class="icon" data-collapse aria-label="Esconder controles (H)" title="Esconder (H)" aria-controls="panel">${ICONS.hide}</button>
       </header>
@@ -2154,7 +2159,6 @@ function mountPanel(host, settings, change, inView) {
 
       <div class="shared">
         <div class="section">Visualiza\xE7\xE3o</div>
-        <div class="block pair"><span>Tema</span>${seg("theme", "Tema", [["dark", `${ICONS.moon}Escuro`], ["light", `${ICONS.sun}Claro`]])}</div>
         <div class="block pair"><span>Estilo</span>${seg("style", "Estilo", [["mosaic", "Mosaico"], ["smooth", "Liso"]])}</div>
         <div class="block">
           <div class="label"><label for="zoomOut">Dist\xE2ncia</label><span class="hint" data-value="zoomOut"></span></div>
@@ -2217,7 +2221,11 @@ function mountPanel(host, settings, change, inView) {
     $("[data-more]").disabled = settings.atOnce >= 8;
     for (const b of $$("[data-kind]")) b.setAttribute("aria-pressed", String(settings.species.includes(b.dataset.kind)));
     for (const b of $$("[data-speed]")) b.setAttribute("aria-pressed", String(Number(b.dataset.speed) === settings.speed));
-    for (const b of $$("[data-theme]")) b.setAttribute("aria-pressed", String(b.dataset.theme === settings.theme));
+    const theme = $("[data-theme-toggle]");
+    const toLight = settings.theme === "dark";
+    theme.innerHTML = toLight ? ICONS.sun : ICONS.moon;
+    theme.setAttribute("aria-label", toLight ? "Tema claro" : "Tema escuro");
+    theme.title = toLight ? "Tema claro" : "Tema escuro";
     for (const b of $$("[data-style]")) b.setAttribute("aria-pressed", String(b.dataset.style === settings.style));
     for (const b of $$("[data-watch]")) b.setAttribute("aria-pressed", String(b.dataset.watch === settings.observe));
     if (settings.observe !== null) {
@@ -2242,7 +2250,7 @@ function mountPanel(host, settings, change, inView) {
     } else if (d.watch !== void 0) watch(d.watch);
     else if (d.step !== void 0) step(Number(d.step));
     else if (d.speed !== void 0) set({ speed: Number(d.speed) });
-    else if (d.theme !== void 0) set({ theme: d.theme });
+    else if (b.hasAttribute("data-theme-toggle")) set({ theme: settings.theme === "dark" ? "light" : "dark" });
     else if (d.style !== void 0) set({ style: d.style });
     else if (b.hasAttribute("data-pause")) set({ paused: !settings.paused });
     else if (b.hasAttribute("data-less")) set({ atOnce: Math.max(1, settings.atOnce - 1) });
@@ -2285,6 +2293,10 @@ function mountPanel(host, settings, change, inView) {
 
 // src/index.ts
 var LIGHT = "#dde6e9";
+var DEEP_DARK = "#16202a";
+var DEEP_LIGHT = "#a9c2cc";
+var FADE = 0.6;
+var BLUR = 7;
 var SAVED = "shark-night:settings";
 var GLYPHS = "$%tSX8@:;#S%X8tS";
 var SHADES = [1, 0.886, 0.776, 0.659];
@@ -2352,6 +2364,9 @@ function mountSharkNight(host, options = {}) {
   const low = document.createElement("canvas");
   const lctx = low.getContext("2d", { willReadFrequently: true });
   const still = document.createElement("canvas");
+  const layer = document.createElement("canvas");
+  const lowLayer = document.createElement("canvas");
+  const lowLayerCtx = lowLayer.getContext("2d", { willReadFrequently: true });
   let sea;
   let scale = 1;
   let cols = 0;
@@ -2487,24 +2502,46 @@ function mountSharkNight(host, options = {}) {
       }
     }
   }
+  function lay(onto, c, a, tile, s, left, top, blur) {
+    const { width, height } = onto.canvas;
+    if (c.canvas.width !== width || c.canvas.height !== height) {
+      c.canvas.width = width;
+      c.canvas.height = height;
+    } else {
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, width, height);
+    }
+    c.setTransform(s, 0, 0, s, -left * s, -top * s);
+    c.lineJoin = "round";
+    DRAW[KINDS[a.kind].plan](c, a, tile);
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.globalCompositeOperation = "source-atop";
+    c.globalAlpha = a.depth * FADE;
+    c.fillStyle = settings.theme === "light" ? DEEP_LIGHT : DEEP_DARK;
+    c.fillRect(0, 0, width, height);
+    c.globalAlpha = 1;
+    c.globalCompositeOperation = "source-over";
+    onto.setTransform(1, 0, 0, 1, 0, 0);
+    if (blur >= 0.5) onto.filter = `blur(${blur.toFixed(1)}px)`;
+    onto.drawImage(c.canvas, 0, 0);
+    onto.filter = "none";
+  }
   function paint() {
     const cell = settings.cell;
     const v = view();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(still, 0, 0);
     if (watch !== void 0) specks(v);
+    const animals = [...v.animals].sort((a, b) => b.depth - a.depth);
     if (settings.style === "smooth") {
-      ctx.setTransform(v.s, 0, 0, v.s, -v.left * v.s, -v.top * v.s);
-      ctx.lineJoin = "round";
-      for (const a of v.animals) DRAW[KINDS[a.kind].plan](ctx, a, 0);
+      const c = layer.getContext("2d");
+      for (const a of animals) lay(ctx, c, a, 0, v.s, v.left, v.top, Math.max(0, a.depth - 0.25) * BLUR * v.s);
       return;
     }
     const tu = cell * scale / v.s;
     lctx.setTransform(1, 0, 0, 1, 0, 0);
     lctx.clearRect(0, 0, cols, rows);
-    lctx.setTransform(1 / tu, 0, 0, 1 / tu, -v.left / tu, -v.top / tu);
-    lctx.lineJoin = "round";
-    for (const a of v.animals) DRAW[KINDS[a.kind].plan](lctx, a, tu);
+    for (const a of animals) lay(lctx, lowLayerCtx, a, tu, 1 / tu, v.left, v.top, 0);
     const px = lctx.getImageData(0, 0, cols, rows).data;
     const size = cell * scale;
     const light = settings.theme === "light";

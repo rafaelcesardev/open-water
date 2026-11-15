@@ -36,6 +36,12 @@ export type Options = {
 }
 
 const LIGHT = '#dde6e9'
+/** The water a deep animal fades into, seen through it from above: bluer than the surface, darker at night. */
+const DEEP_DARK = '#16202a'
+const DEEP_LIGHT = '#a9c2cc'
+/** How far the deepest fade into it, and how blurred they are, in sea units (the smooth style only). */
+const FADE = 0.6
+const BLUR = 7
 const SAVED = 'shark-night:settings'
 
 const GLYPHS = '$%tSX8@:;#S%X8tS'
@@ -118,6 +124,11 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
   const lctx = low.getContext('2d', { willReadFrequently: true })!
   // The still water: in the mosaic, a faint grid and a few loose dashes; drawn once.
   const still = document.createElement('canvas')
+  // Each animal is drawn alone on one of these, faded as deep as it swims, then laid on the rest: one the window's
+  // size, one the mosaic's (kept apart, as the mosaic's is read back).
+  const layer = document.createElement('canvas')
+  const lowLayer = document.createElement('canvas')
+  const lowLayerCtx = lowLayer.getContext('2d', { willReadFrequently: true })!
 
   // Set by layout(), which runs before anything reads it.
   let sea!: Sea
@@ -299,25 +310,53 @@ export function mountSharkNight(host: HTMLElement, options: Options = {}): () =>
     }
   }
 
+  /**
+   * Draws `a` alone on `c` (cleared to `onto`'s size), seen at scale `s` from (`left`, `top`), fades it toward the deep
+   * water as deep as it swims, and lays it on `onto`, blurred by `blur` pixels.
+   */
+  function lay(onto: CanvasRenderingContext2D, c: CanvasRenderingContext2D, a: Animal, tile: number, s: number, left: number, top: number, blur: number): void {
+    const { width, height } = onto.canvas
+    if (c.canvas.width !== width || c.canvas.height !== height) {
+      c.canvas.width = width
+      c.canvas.height = height
+    } else {
+      c.setTransform(1, 0, 0, 1, 0, 0)
+      c.clearRect(0, 0, width, height)
+    }
+    c.setTransform(s, 0, 0, s, -left * s, -top * s)
+    c.lineJoin = 'round'
+    DRAW[KINDS[a.kind]!.plan](c, a, tile)
+    c.setTransform(1, 0, 0, 1, 0, 0)
+    c.globalCompositeOperation = 'source-atop'
+    c.globalAlpha = a.depth * FADE
+    c.fillStyle = settings.theme === 'light' ? DEEP_LIGHT : DEEP_DARK
+    c.fillRect(0, 0, width, height)
+    c.globalAlpha = 1
+    c.globalCompositeOperation = 'source-over'
+    onto.setTransform(1, 0, 0, 1, 0, 0)
+    if (blur >= 0.5) onto.filter = `blur(${blur.toFixed(1)}px)`
+    onto.drawImage(c.canvas, 0, 0)
+    onto.filter = 'none'
+  }
+
   function paint(): void {
     const cell = settings.cell
     const v = view()
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.drawImage(still, 0, 0)
     if (watch !== undefined) specks(v)
+    // The deepest first: one nearer the surface passes over it.
+    const animals = [...v.animals].sort((a, b) => b.depth - a.depth)
     if (settings.style === 'smooth') {
-      ctx.setTransform(v.s, 0, 0, v.s, -v.left * v.s, -v.top * v.s)
-      ctx.lineJoin = 'round'
-      for (const a of v.animals) DRAW[KINDS[a.kind]!.plan](ctx, a, 0)
+      const c = layer.getContext('2d')!
+      for (const a of animals) lay(ctx, c, a, 0, v.s, v.left, v.top, Math.max(0, a.depth - 0.25) * BLUR * v.s)
       return
     }
     // The tiles keep their size on screen whatever the framing: closer in, a tile covers less of the animal.
     const tu = (cell * scale) / v.s
     lctx.setTransform(1, 0, 0, 1, 0, 0)
     lctx.clearRect(0, 0, cols, rows)
-    lctx.setTransform(1 / tu, 0, 0, 1 / tu, -v.left / tu, -v.top / tu)
-    lctx.lineJoin = 'round'
-    for (const a of v.animals) DRAW[KINDS[a.kind]!.plan](lctx, a, tu)
+    for (const a of animals) lay(lctx, lowLayerCtx, a, tu, 1 / tu, v.left, v.top, 0)
     const px = lctx.getImageData(0, 0, cols, rows).data
     const size = cell * scale
     const light = settings.theme === 'light'
