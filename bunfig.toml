@@ -1,0 +1,3 @@
+# The theme has its own test, run by the engine: claude plugin test theme
+[test]
+root = "src"

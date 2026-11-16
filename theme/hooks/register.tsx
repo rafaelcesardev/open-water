@@ -1,6 +1,9 @@
-// Open Water as the Claude app's look: the sea behind the conversation, live, at night or by day as the app is, and the app's colours taken
-// from it. The sea is simulated here, a few seconds at a time, and each stretch is sent to the app as one SVG that
-// plays itself (backdrop.js, bundled from src/backdrop.ts by `npm run theme`).
+// Open Water as the Claude app's look: the sea behind the conversation, live, at night or by day as the app is. The
+// sea is simulated here, a few seconds at a time, and each stretch is sent to the app as one SVG that plays itself
+// (backdrop.js, bundled from src/backdrop.ts by `npm run theme`).
+// ONE SEA, WHATEVER THE CHAT: each chat is a session of its own, running this module by itself, and the app shows the
+// backdrop of the chat in view. So the sea runs on the clock, and the session that shows it leaves it in the store
+// every few seconds: a chat opened or shown again carries on the same animals from where they are by now.
 
 import type { Register, ThemeSetArgs } from 'claude-code'
 
@@ -40,9 +43,15 @@ const { problems } = makeColors({
 })
 
 const SCENE = 'open-water'
-// A stretch of sea a send. The app shows each send in a frame of its own, made anew at every swap, so fewer swaps
-// is fewer chances to stutter; two seconds still fits the app's limit at ten samples a second.
-const SECONDS = 2
+// A stretch of sea a send: a second, which fits the app's limit at twenty samples a second with room to spare.
+const SECONDS = 1
+/** Samples of sea a second, as backdrop.ts counts them from the Unix epoch, and samples a send. */
+const RATE = 20
+const SAMPLES = SECONDS * RATE
+/** Milliseconds before a stretch is due that it is worked out: more than that takes, so it is sent on time. */
+const AHEAD = 500
+/** Where the sea is left for the other sessions. */
+const KEPT = 'sea'
 /** Up to three animals at once, and not the blue whale or the school: they light the most tiles, so the app has the
  * least to redraw. */
 const AT_ONCE = 3
@@ -57,6 +66,9 @@ const [WATER, LIGHT_WATER] = ['#191919', '#f9f9f7']
 // the text; and no blur, which it would redo at every change of a sea that moves.
 const LOOK: ThemeSetArgs = { backdrop: { scene: SCENE, glass: { blur: 0, opacity: 0 } } }
 
+/** The surfaces that draw the backdrop. */
+const draws = (surface: string): boolean => surface === 'desktop' || surface === 'mobile'
+
 export const register: Register = on => {
   const sea = createBackdrop({
     seconds: SECONDS,
@@ -66,12 +78,23 @@ export const register: Register = on => {
     lightWater: LIGHT_WATER,
     // Nothing still of ours over the water: only the animals move over the app's background.
     texture: false,
+    // Two sends are drawn at once, and the app takes 262144 characters for all it draws.
+    limit: 130000,
   })
-  let svg = sea.next()
+  /**
+   * The stretch playing and, under it, the one before. The app draws each send in a frame of its own, and a frame
+   * that leaves takes its sea with it at once while the next takes a moment to come: with one frame the animals
+   * blinked out at every send. The stretch before stays under the new one until that has come and covers it.
+   */
+  let shown: string[] = []
+  /** The sea is going: a stretch is due. Not in the terminal, where nothing draws it, nor in a chat out of view. */
+  let going: Promise<void> | undefined
   let timer: { cancel: () => void } | undefined
+  let run = 0
   const stop = (): void => {
+    run += 1
     timer?.cancel()
-    timer = undefined
+    going = undefined
   }
 
   on('session.start', async ($, e, next) => {
@@ -79,28 +102,71 @@ export const register: Register = on => {
     if (unpainted !== undefined) $.ui.toast(unpainted)
     // Not drawn in the terminal and editors, and that is fine: the backdrop is only for the app.
     await $.theme.set(LOOK)
-    // The next stretch of sea as the last one ends, from where the last one is by the time it was really shown: the
-    // timer is never exactly on time, and a stretch made ahead for an exact period jumped the sea ahead or back.
-    stop()
-    let shownAt = await $.clock.now()
-    timer = $.clock.every(SECONDS * 1000, async () => {
-      const now = await $.clock.now()
-      svg = sea.next((now - shownAt) / 1000)
-      shownAt = now
-      $.ui.invalidate('ui.render')
-    })
     return next(e)
   })
 
-  // No sea worked out for a session that has ended.
+  // A /clear ends the session and no other starts: the chat goes on, and so does its sea.
   on('session.end', ($, e, next) => {
-    stop()
+    if (e.reason !== 'clear') stop()
     return next(e)
   })
 
-  on('ui.render', { component: 'Backdrop' }, ($, e, next) => {
+  // A chat out of view asks for nothing: no sea is worked out for it, and what the app kept of it is let go, so that
+  // shown again it asks, and gets the sea as it is by then instead of the stretch it left at, played again.
+  on('session.detach', async ($, e, next) => {
+    const out = await next(e)
+    if (going !== undefined && !(await $.session.surfaces()).some(draws)) {
+      stop()
+      shown = []
+      $.ui.invalidate('ui.render')
+    }
+    return out
+  })
+  on('session.attach', async ($, e, next) => {
+    const out = await next(e)
+    if (going === undefined && draws(e.surface)) $.ui.invalidate('ui.render')
+    return out
+  })
+
+  on('ui.render', { component: 'Backdrop' }, async ($, e, next) => {
     if ((e.surface !== 'desktop' && e.surface !== 'mobile') || e.props.scene !== SCENE) return next(e)
-    const { Svg } = $.ui.resolve(e)
-    return <Svg source={svg} alt="Sea animals swimming past, seen from above, as a mosaic" isInteractive />
+    // Asked with no sea going (the chat just opened, or shown again): from this moment, carrying on the sea the last
+    // session to show it left. From then on each stretch is worked out ahead and sent when it is due: the clock's
+    // own callbacks, as a hook that waits is cut off.
+    going ??= (async () => {
+      const mine = (run += 1)
+      let from = Math.floor((await $.clock.now()) / (1000 / RATE)) + 1
+      let left = -1
+      shown = [sea.at(from, await $.store.get(KEPT))]
+      const ahead = async (): Promise<void> => {
+        if (mine !== run) return
+        // Late by a stretch or more (the computer slept): from now, not from where it should have been.
+        const now = Math.floor((await $.clock.now()) / (1000 / RATE))
+        from = Math.max(from + SAMPLES, now + 1)
+        const due = sea.at(from, await $.store.get(KEPT))
+        const saved = sea.saved(now)
+        if (saved !== undefined && saved.at !== left) {
+          left = saved.at
+          await $.store.set(KEPT, saved)
+        }
+        timer = $.clock.after(Math.max(0, from * (1000 / RATE) - (await $.clock.now())), () => {
+          if (mine !== run) return
+          shown = [shown[shown.length - 1]!, due]
+          $.ui.invalidate('ui.render')
+          timer = $.clock.after(SECONDS * 1000 - AHEAD, ahead)
+        })
+      }
+      timer = $.clock.after(SECONDS * 1000 - AHEAD, ahead)
+    })()
+    await going
+    const { Box, Svg } = $.ui.resolve(e)
+    // shortcut: on mobile only the stretch playing, as before: how it lays two frames out is not known here.
+    return (
+      <Box>
+        {(e.surface === 'mobile' ? shown.slice(-1) : shown).map(source => (
+          <Svg source={source} alt="Sea animals swimming past, seen from above, as a mosaic" isInteractive />
+        ))}
+      </Box>
+    )
   })
 }

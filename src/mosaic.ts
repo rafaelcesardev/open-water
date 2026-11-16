@@ -361,8 +361,13 @@ export function createMosaic(width: number, height: number, tile: number, textur
     })
     if (shade < 1) shades += `<path fill-opacity="${Math.round((1 - shade) * 1000) / 1000}" d="${d}"/>`
   }
+  // One text for all the glyphs, each at its own place: a tenth of the elements for the app to check at every send.
+  const [xs, ys]: [number[], number[]] = [[], []]
   table.glyph.forEach((g, i) => {
-    if (g !== '') glyphs += `<text x="${(i % 16) * tile + tile / 2}" y="${Math.floor(i / 16) * tile + tile * 0.54}">${g.replace('&', '&amp;').replace('<', '&lt;')}</text>`
+    if (g === '') return
+    xs.push((i % 16) * tile + tile / 2)
+    ys.push(Math.floor(i / 16) * tile + tile * 0.54)
+    glyphs += g
   })
   let gaps = ''
   for (let k = 0; k <= 16; k += 1) gaps += `M${k * tile} 0V${span}M0 ${k * tile}H${span}`
@@ -371,12 +376,20 @@ export function createMosaic(width: number, height: number, tile: number, textur
   for (let i = 0; i < 120; i += 1) dashes += `M${Math.floor(rand() * cols) * tile + tile * 0.3} ${Math.floor(rand() * rows) * tile + tile * 0.45}h${tile * 0.4}v${tile * 0.1}h${-tile * 0.4}z`
   const under =
     `<defs><pattern id="p" class="w" width="${span}" height="${span}" patternUnits="userSpaceOnUse">${shades}` +
-    `<g class="gl" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" font-size="${tile * 0.72}" text-anchor="middle" dominant-baseline="middle">${glyphs}</g>` +
+    `<text class="gl" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" font-size="${tile * 0.72}" text-anchor="middle" dominant-baseline="middle" x="${xs.join(' ')}" y="${ys.join(' ')}">${glyphs}</text>` +
     `<path class="ws" d="${gaps}" stroke-width="${tile * 0.12}"/></pattern>` +
     `<pattern id="grid" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse"><path class="grid" d="M0 0H${tile}M0 0V${tile}" fill="none"/></pattern></defs>` +
     (texture ? `<path class="ink" d="${dashes}"/>` : '')
-  // Without `texture`, no dashes or grid: the water is nothing but its colour, where no tile is lit.
-  const over = `<rect width="${width}" height="${height}" fill="url(#p)"/>${texture ? `<rect width="${width}" height="${height}" fill="url(#grid)"/>` : ''}`
+  // Without `texture`, no dashes or grid: the water is nothing but its colour, where no tile is lit. The shades and
+  // glyphs are then laid only over the squares of the pattern that hold a lit tile: over bare water they paint water
+  // on water, and the app worked the whole window's worth of pattern at every change (a third more, measured).
+  const whole = `<rect width="${width}" height="${height}" fill="url(#p)"/><rect width="${width}" height="${height}" fill="url(#grid)"/>`
+  const over = (lit: Set<number>): string => {
+    if (texture) return whole
+    let d = ''
+    for (const c of lit) d += `M${(c % 1024) * span} ${Math.floor(c / 1024) * span}h${span}v${span}h${-span}z`
+    return d === '' ? '' : `<path fill="url(#p)" d="${d}"/>`
+  }
 
   /** Paths of the tiles given, a path a colour, each row's neighbours of one colour one run, drawn as a line a tile
    * thick along the row's middle (shorter to write than its outline); in tile units. */
@@ -420,8 +433,13 @@ export function createMosaic(width: number, height: number, tile: number, textur
     /** The moments as SVG markup inside the sea's `<svg>`: the first whole, each later one as what changed. */
     animate(shots: Shot[], step: number): string {
       const first = new Map<number, number>()
+      /** The pattern's squares, 16 tiles a side, that hold a tile lit at some moment: row * 1024 + column. */
+      const lit = new Set<number>()
+      const light = (t: number): void => void lit.add(Math.floor(t / cols / 16) * 1024 + Math.floor((t % cols) / 16))
       shots[0]!.forEach((c, t) => {
-        if (c !== -1) first.set(t, c)
+        if (c === -1) return
+        first.set(t, c)
+        light(t)
       })
       let body = paths(first)
       // What each tile shows: a lit tile keeps its colour until the body's there differs by more than a little, so
@@ -436,11 +454,12 @@ export function createMosaic(width: number, height: number, tile: number, textur
           if (c === was || (c !== -1 && was !== -1 && apart(c, was) <= SAME)) return
           shown[t] = c
           changed.set(t, c)
+          if (c !== -1) light(t)
           if (c !== -1 && was !== -1 && c >>> 24 < LEVELS) clear.set(t, -1)
         })
         if (changed.size > 0) body += `<g visibility="hidden"><set attributeName="visibility" to="visible" begin="${Math.round(k * step * 100) / 100}s"/>${paths(clear)}${paths(changed)}</g>`
       }
-      return `${under}<g transform="scale(${tile}) translate(0 .5)" stroke-width="1" fill="none">${body}</g>${over}`
+      return `${under}<g transform="scale(${tile}) translate(0 .5)" stroke-width="1" fill="none">${body}</g>${over(lit)}`
     },
   }
 }

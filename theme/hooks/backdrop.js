@@ -2388,16 +2388,26 @@ function createMosaic(width, height, tile, texture = true) {
     });
     if (shade < 1) shades += `<path fill-opacity="${Math.round((1 - shade) * 1e3) / 1e3}" d="${d}"/>`;
   }
+  const [xs, ys] = [[], []];
   table2.glyph.forEach((g, i) => {
-    if (g !== "") glyphs += `<text x="${i % 16 * tile + tile / 2}" y="${Math.floor(i / 16) * tile + tile * 0.54}">${g.replace("&", "&amp;").replace("<", "&lt;")}</text>`;
+    if (g === "") return;
+    xs.push(i % 16 * tile + tile / 2);
+    ys.push(Math.floor(i / 16) * tile + tile * 0.54);
+    glyphs += g;
   });
   let gaps = "";
   for (let k = 0; k <= 16; k += 1) gaps += `M${k * tile} 0V${span}M0 ${k * tile}H${span}`;
   const rand = rng(99);
   let dashes = "";
   for (let i = 0; i < 120; i += 1) dashes += `M${Math.floor(rand() * cols) * tile + tile * 0.3} ${Math.floor(rand() * rows) * tile + tile * 0.45}h${tile * 0.4}v${tile * 0.1}h${-tile * 0.4}z`;
-  const under = `<defs><pattern id="p" class="w" width="${span}" height="${span}" patternUnits="userSpaceOnUse">${shades}<g class="gl" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" font-size="${tile * 0.72}" text-anchor="middle" dominant-baseline="middle">${glyphs}</g><path class="ws" d="${gaps}" stroke-width="${tile * 0.12}"/></pattern><pattern id="grid" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse"><path class="grid" d="M0 0H${tile}M0 0V${tile}" fill="none"/></pattern></defs>` + (texture ? `<path class="ink" d="${dashes}"/>` : "");
-  const over = `<rect width="${width}" height="${height}" fill="url(#p)"/>${texture ? `<rect width="${width}" height="${height}" fill="url(#grid)"/>` : ""}`;
+  const under = `<defs><pattern id="p" class="w" width="${span}" height="${span}" patternUnits="userSpaceOnUse">${shades}<text class="gl" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" font-size="${tile * 0.72}" text-anchor="middle" dominant-baseline="middle" x="${xs.join(" ")}" y="${ys.join(" ")}">${glyphs}</text><path class="ws" d="${gaps}" stroke-width="${tile * 0.12}"/></pattern><pattern id="grid" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse"><path class="grid" d="M0 0H${tile}M0 0V${tile}" fill="none"/></pattern></defs>` + (texture ? `<path class="ink" d="${dashes}"/>` : "");
+  const whole = `<rect width="${width}" height="${height}" fill="url(#p)"/><rect width="${width}" height="${height}" fill="url(#grid)"/>`;
+  const over = (lit) => {
+    if (texture) return whole;
+    let d = "";
+    for (const c of lit) d += `M${c % 1024 * span} ${Math.floor(c / 1024) * span}h${span}v${span}h${-span}z`;
+    return d === "" ? "" : `<path fill="url(#p)" d="${d}"/>`;
+  };
   const paths = (tiles) => {
     const byColour = /* @__PURE__ */ new Map();
     for (const [t, c] of tiles) (byColour.get(c) ?? byColour.set(c, []).get(c)).push(t);
@@ -2435,8 +2445,12 @@ function createMosaic(width, height, tile, texture = true) {
     /** The moments as SVG markup inside the sea's `<svg>`: the first whole, each later one as what changed. */
     animate(shots, step) {
       const first = /* @__PURE__ */ new Map();
+      const lit = /* @__PURE__ */ new Set();
+      const light = (t) => void lit.add(Math.floor(t / cols / 16) * 1024 + Math.floor(t % cols / 16));
       shots[0].forEach((c, t) => {
-        if (c !== -1) first.set(t, c);
+        if (c === -1) return;
+        first.set(t, c);
+        light(t);
       });
       let body = paths(first);
       const shown = Int32Array.from(shots[0]);
@@ -2448,11 +2462,12 @@ function createMosaic(width, height, tile, texture = true) {
           if (c === was || c !== -1 && was !== -1 && apart2(c, was) <= SAME) return;
           shown[t] = c;
           changed.set(t, c);
+          if (c !== -1) light(t);
           if (c !== -1 && was !== -1 && c >>> 24 < LEVELS) clear.set(t, -1);
         });
         if (changed.size > 0) body += `<g visibility="hidden"><set attributeName="visibility" to="visible" begin="${Math.round(k * step * 100) / 100}s"/>${paths(clear)}${paths(changed)}</g>`;
       }
-      return `${under}<g transform="scale(${tile}) translate(0 .5)" stroke-width="1" fill="none">${body}</g>${over}`;
+      return `${under}<g transform="scale(${tile}) translate(0 .5)" stroke-width="1" fill="none">${body}</g>${over(lit)}`;
     }
   };
 }
@@ -2461,9 +2476,11 @@ function createMosaic(width, height, tile, texture = true) {
 globalThis.Path2D ?? (globalThis.Path2D = SvgPath);
 var STEP3 = 1 / 60;
 var MARGIN = 20;
-var RATE = 10;
+var RATE = 20;
 var SPARE = 0.3;
-var LEAD2 = 0.1;
+var FRESH = 30;
+var KEEP = 100;
+var VERSION = 1;
 var FADE = 0.8;
 var SMOOTH_FITS = ["white", "hammer", "tiger", "blacktip", "orca", "dolphin", "manta"];
 function createBackdrop(o = {}) {
@@ -2474,6 +2491,40 @@ function createBackdrop(o = {}) {
   sea.atOnce = o.atOnce ?? (mosaic ? 4 : 1);
   const names = o.species ?? (mosaic ? KINDS.map((k) => k.name) : SMOOTH_FITS);
   sea.allowed = new Set(KINDS.map((k, i) => names.includes(k.name) ? i : -1).filter((i) => i >= 0));
+  let seed = 0;
+  const random = () => {
+    seed = seed + 1831565813 >>> 0;
+    let t = seed;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+  let born = -Infinity;
+  let now = -Infinity;
+  const kept = [];
+  const keep = () => {
+    const animals = sea.animals.map((a) => ({ ...a, prey: a.prey === void 0 ? -1 : sea.animals.indexOf(a.prey) }));
+    kept.push(JSON.parse(JSON.stringify({ v: VERSION, born, at: now, random: seed, sea: { next: sea.next, gone: sea.gone, animals } })));
+    if (kept.length > 2) kept.shift();
+  };
+  const begin = (at2) => {
+    ;
+    [born, now, seed] = [at2, at2, at2 >>> 0];
+    Object.assign(sea, { animals: [], next: 0, gone: -1 });
+    kept.length = 0;
+    keep();
+  };
+  const carryOn = (s) => {
+    ;
+    [born, now, seed] = [s.born, s.at, s.random];
+    const saved = JSON.parse(JSON.stringify(s.sea.animals));
+    const animals = saved.map((a) => ({ ...a, prey: void 0 }));
+    saved.forEach((a, i) => animals[i].prey = animals[a.prey]);
+    Object.assign(sea, { animals, next: s.sea.next, gone: s.sea.gone });
+    kept.length = 0;
+    kept.push(s);
+  };
+  const usable = (s, from) => typeof s === "object" && s !== null && s.v === VERSION && s.at <= from && from - s.at <= FRESH * RATE;
   const inOrder = () => [...sea.animals].sort((p, q) => q.depth - p.depth);
   const tiles = createMosaic(width, height, o.cell ?? 10, o.texture ?? true);
   const shoot = () => {
@@ -2495,27 +2546,39 @@ function createBackdrop(o = {}) {
     }
     return root;
   };
-  const wrap = (body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid slice">${waterStyle(water, lightWater)}<rect class="w" width="${width}" height="${height}"/>${body}</svg>`;
+  const wrap = (body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid slice" color="#000" font-family="monospace">${waterStyle(water, lightWater)}<rect class="w" width="${width}" height="${height}"/>${body}</svg>`;
   function stream(take, draw) {
     const queue = [];
-    const [n, lead, spare] = [Math.round(seconds * RATE), Math.round(LEAD2 * RATE), Math.round(SPARE * RATE)];
-    let first = true;
-    return (shown = seconds) => {
-      if (!first) queue.splice(0, Math.max(0, Math.min(n + spare, Math.round(shown * RATE))));
-      first = false;
-      while (queue.length < n + spare + 1) {
-        if (queue.length > 0) for (let t = 0; t < 1 / RATE - 1e-9; t += STEP3) stepSea(sea, STEP3, MARGIN);
+    let head = 0;
+    const [n, spare] = [Math.round(seconds * RATE), Math.round(SPARE * RATE)];
+    return (from, shared) => {
+      const stale = from - now > FRESH * RATE;
+      if (usable(shared, from) && (stale || shared.born < born || shared.born === born && shared.at > now)) {
+        carryOn(shared);
+        queue.length = 0;
+      } else if (stale) {
+        begin(from);
+        queue.length = 0;
+      }
+      from = Math.max(from, queue.length > 0 ? head : now);
+      queue.splice(0, from - head);
+      head = from;
+      while (queue.length <= n + spare) {
+        for (const sample = head + queue.length; now < sample; ) {
+          for (let t = 0; t < 1 / RATE - 1e-9; t += STEP3) stepSea(sea, STEP3, MARGIN, random);
+          now += 1;
+          if (now % KEEP === 0) keep();
+        }
         queue.push(take());
       }
-      const moments = queue.slice(lead, n + spare + 1);
       for (const every of [1, 2, 3, 4, 5, 6, 10]) {
-        const svg = wrap(draw(moments.filter((_, i) => i % every === 0), every / RATE));
+        const svg = wrap(draw(queue.filter((_, i) => i % every === 0), every / RATE));
         if (svg.length <= limit) return svg;
       }
-      return wrap(draw([moments[0]], 1));
+      return wrap(draw([queue[0]], 1));
     };
   }
-  return { sea, next: mosaic ? stream(shoot, tiles.animate) : stream(moment, animate) };
+  return { sea, at: mosaic ? stream(shoot, tiles.animate) : stream(moment, animate), saved: (by) => kept.filter((k) => k.at <= by).pop() };
 }
 export {
   createBackdrop

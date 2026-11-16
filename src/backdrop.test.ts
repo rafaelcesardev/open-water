@@ -13,7 +13,7 @@ test('each send fits the app and moves, for every kind the smooth style lets in'
   for (const name of ['white', 'hammer', 'tiger', 'blacktip', 'orca', 'dolphin', 'manta'] as const) {
     const b = createBackdrop({ style: 'smooth', species: [name] })
     for (let i = 0; i < 4; i += 1) {
-      const svg = b.next()
+      const svg = b.at(i * 30)
       assert.ok(svg.startsWith('<svg') && svg.endsWith('</svg>'), name)
       assert.ok(svg.length <= 131072, `${name}: ${svg.length}`)
       assert.ok(svg.includes('<animate '), `${name}: nothing moves`)
@@ -24,7 +24,7 @@ test('each send fits the app and moves, for every kind the smooth style lets in'
 test('the mosaic fits the app with every kind at once, and its tiles change as they swim', () => {
   const b = createBackdrop({ atOnce: 4 })
   for (let i = 0; i < 12; i += 1) {
-    const svg = b.next()
+    const svg = b.at(i * 30)
     assert.ok(svg.length <= 131072, String(svg.length))
     assert.ok(svg.includes('fill="url(#p)"'))
     if (i > 2) assert.match(svg, /<set attributeName="visibility" to="visible" begin="[\d.]+s"\/>/)
@@ -67,23 +67,43 @@ test('a point that is not a number is left out of the path, as on a canvas, not 
   assert.equal(p.d, 'M2 3L6 7')
 })
 
-test('a send picks up where the last one was shown, early or late, and a very late one only waits', () => {
+test('a send starts at the sample asked for: early, late or the clock set back, and long after it is a new sea', () => {
   const b = createBackdrop({ atOnce: 4, seconds: 2 })
-  b.next()
-  for (const shown of [0, 0.4, 2.3, 600]) {
+  b.at(1000)
+  for (const from of [1000, 1004, 1027, 990, 7000]) {
     const t = performance.now()
-    const svg = b.next(shown)
-    assert.ok(svg.startsWith('<svg') && svg.length <= 131072, String(shown))
+    const svg = b.at(from)
+    assert.ok(svg.startsWith('<svg') && svg.length <= 131072, String(from))
     // Late by minutes: the sea is not worked out for all of them.
-    assert.ok(performance.now() - t < 2000, `${shown}: ${Math.round(performance.now() - t)} ms`)
+    assert.ok(performance.now() - t < 2000, `${from}: ${Math.round(performance.now() - t)} ms`)
   }
+  assert.equal(b.saved(7000)!.born, 7000)
+})
+
+test('one sea for every session: the same stretch whoever works it out, however it got there', () => {
+  const options = { atOnce: 3, seconds: 2 }
+  const first = createBackdrop(options)
+  for (let from = 5000; from < 5600; from += 40) first.at(from)
+  // A session that starts later carries on what the first one saved; one shown again after a while skips ahead.
+  const saved = first.saved(5600)
+  assert.ok(saved !== undefined && saved.at > 5500 && saved.sea.animals.length > 0)
+  const later = createBackdrop(options)
+  const back = createBackdrop(options)
+  back.at(5000)
+  assert.equal(later.at(5600, saved), first.at(5600))
+  assert.equal(back.at(5600, saved), later.at(5600))
+  // What was handed on is as it was, to hand on again; and a sea saved too long ago, or by other code, is let go.
+  assert.deepEqual(later.saved(5600), saved)
+  assert.equal(later.at(5700), first.at(5700))
+  assert.notEqual(createBackdrop(options).at(9000, saved), createBackdrop(options).at(5600, saved))
+  assert.equal(createBackdrop(options).at(5600, { ...saved, v: 0 }), createBackdrop(options).at(5600))
 })
 
 test('without texture, nothing but the animals over the water', () => {
-  const svg = createBackdrop({ atOnce: 4, texture: false, water: '#0b0b0b', lightWater: '#f9f9f7' }).next()
+  const svg = createBackdrop({ atOnce: 4, texture: false, water: '#0b0b0b', lightWater: '#f9f9f7' }).at(0)
   assert.doesNotMatch(svg, /class="ink"|fill="url\(#grid\)"/)
   assert.match(svg, /\.w\{fill:#0b0b0b\}.*\.w\{fill:#f9f9f7\}/)
-  assert.match(createBackdrop({ atOnce: 4 }).next(), /class="ink".*fill="url\(#grid\)"/)
+  assert.match(createBackdrop({ atOnce: 4 }).at(0), /class="ink".*fill="url\(#grid\)"/)
 })
 
 test('the sea starts empty: the first animals come in from beyond an edge, never already in view', () => {
@@ -91,7 +111,7 @@ test('the sea starts empty: the first animals come in from beyond an edge, never
     const b = createBackdrop({ atOnce: 4 })
     assert.equal(b.sea.animals.length, 0)
     // The first moment of the first send: no tile lit yet.
-    const svg = b.next()
+    const svg = b.at(run * 977)
     const first = svg.slice(svg.indexOf('<g transform="scale('), svg.indexOf('<g visibility="hidden">'))
     assert.doesNotMatch(first, /<path/, `run ${run}`)
   }
