@@ -1,6 +1,6 @@
 // The sea as a backdrop for a surface that takes an SVG and runs no script (the Claude app's): the same simulation and
-// drawings as the page, sent a second or two at a time. Each send is a stretch of the sea, sampled up to twenty times
-// a second: in the mosaic, the tiles that change at each sample (mosaic.ts); in the smooth style, the shapes moved
+// drawings as the page, sent a few seconds at a time. Each send is a stretch of the sea, sampled up to ten times a
+// second: in the mosaic, the tiles that change at each sample (mosaic.ts); in the smooth style, the shapes moved
 // between samples by SMIL (svg.ts).
 // ONE SEA FOR EVERY SESSION: the sea runs on the clock. Its samples are counted from the Unix epoch, so `at(from)` is
 // the stretch that starts at a moment every session agrees on; its randomness is seeded at its birth and kept with
@@ -43,15 +43,15 @@ export type Saved = { v: number; born: number; at: number; random: number; sea: 
 
 const STEP = 1 / 60
 const MARGIN = 20
-/** Samples a second at most; fewer when a stretch would not fit the limit. Twenty: at ten, every tile along an
- * animal's front lit on the same beat, and it moved in steps. */
-const RATE = 20
+/** Samples a second at most; fewer when a stretch would not fit the limit. Ten, not twenty: twenty sent twice the
+ * sea a second for the app to check and paint, and in the app it stuttered. */
+const RATE = 10
 /** Seconds of sea past its stretch each send carries (see stream). */
 const SPARE = 0.3
 /** Seconds a sea is carried on after its last sample: past that nobody was watching, and a new one is born empty. */
 const FRESH = 30
 /** The sea is kept for `saved` every so many samples: five seconds. */
-const KEEP = 100
+const KEEP = 50
 /** The shape of a saved sea: one saved by other code is not carried on. */
 const VERSION = 1
 /** How far the deepest fade into the water (the page's smooth style). */
@@ -64,7 +64,7 @@ const SMOOTH_FITS: Kind['name'][] = ['white', 'hammer', 'tiger', 'blacktip', 'or
 
 export type Backdrop = {
   sea: Sea
-  /** The send for the stretch of sea that starts at sample `from` (`Date.now() / 50`, whole). `shared` is what
+  /** The send for the stretch of sea that starts at sample `from` (`Date.now() / 100`, whole). `shared` is what
    * another session `saved`, if anything: carried on from when it is the older sea, or this one has none going. */
   at: (from: number, shared?: unknown) => string
   /** The sea as it was at some sample no later than `by`, to hand to another session's `at`. */

@@ -43,10 +43,10 @@ const { problems } = makeColors({
 })
 
 const SCENE = 'open-water'
-// A stretch of sea a send: a second, which fits the app's limit at twenty samples a second with room to spare.
-const SECONDS = 1
+// A stretch of sea a send; two seconds fits the app's limit at ten samples a second.
+const SECONDS = 2
 /** Samples of sea a second, as backdrop.ts counts them from the Unix epoch, and samples a send. */
-const RATE = 20
+const RATE = 10
 const SAMPLES = SECONDS * RATE
 /** Milliseconds before a stretch is due that it is worked out: more than that takes, so it is sent on time. */
 const AHEAD = 500

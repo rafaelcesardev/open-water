@@ -28,8 +28,8 @@ test('the stretch before stays under the new one, the sea is left for other sess
     await clock.advance(1000)
     await ui.redraw()
   }
-  // A stretch starts on the sample after the asking: here a twentieth of a second past each whole second.
-  await clock.advance(100)
+  // A stretch starts on the sample after the asking: here a tenth of a second past every other whole second.
+  await clock.advance(200)
   await ui.redraw()
   const [, playing] = await sources()
   expect(String(playing).startsWith('<svg')).toBe(true)
@@ -39,7 +39,7 @@ test('the stretch before stays under the new one, the sea is left for other sess
   await ui.redraw()
   expect((await sources())[1]).toBe(playing)
 
-  await clock.advance(600)
+  await clock.advance(1600)
   await ui.redraw()
   const [under, over] = await sources()
   expect(under).toBe(playing)
@@ -47,8 +47,8 @@ test('the stretch before stays under the new one, the sea is left for other sess
 
   // Left in the store within a few seconds, as it was at a moment already past.
   const kept = store.sea as { at: number; born: number }
-  expect(kept.born).toBe(36_000_000_001)
-  expect(kept.at <= clock.now() / 50).toBe(true)
+  expect(kept.born).toBe(18_000_000_001)
+  expect(kept.at <= clock.now() / 100).toBe(true)
 
   // Out of view, as the app does it (the drawing goes, then the client): nothing more is worked out; shown again,
   // the sea is the one that was left, from that moment.

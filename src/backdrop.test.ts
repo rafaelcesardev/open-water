@@ -13,7 +13,7 @@ test('each send fits the app and moves, for every kind the smooth style lets in'
   for (const name of ['white', 'hammer', 'tiger', 'blacktip', 'orca', 'dolphin', 'manta'] as const) {
     const b = createBackdrop({ style: 'smooth', species: [name] })
     for (let i = 0; i < 4; i += 1) {
-      const svg = b.at(i * 30)
+      const svg = b.at(i * 15)
       assert.ok(svg.startsWith('<svg') && svg.endsWith('</svg>'), name)
       assert.ok(svg.length <= 131072, `${name}: ${svg.length}`)
       assert.ok(svg.includes('<animate '), `${name}: nothing moves`)
@@ -24,7 +24,7 @@ test('each send fits the app and moves, for every kind the smooth style lets in'
 test('the mosaic fits the app with every kind at once, and its tiles change as they swim', () => {
   const b = createBackdrop({ atOnce: 4 })
   for (let i = 0; i < 12; i += 1) {
-    const svg = b.at(i * 30)
+    const svg = b.at(i * 15)
     assert.ok(svg.length <= 131072, String(svg.length))
     assert.ok(svg.includes('fill="url(#p)"'))
     if (i > 2) assert.match(svg, /<set attributeName="visibility" to="visible" begin="[\d.]+s"\/>/)
@@ -83,7 +83,7 @@ test('a send starts at the sample asked for: early, late or the clock set back, 
 test('one sea for every session: the same stretch whoever works it out, however it got there', () => {
   const options = { atOnce: 3, seconds: 2 }
   const first = createBackdrop(options)
-  for (let from = 5000; from < 5600; from += 40) first.at(from)
+  for (let from = 5000; from < 5600; from += 20) first.at(from)
   // A session that starts later carries on what the first one saved; one shown again after a while skips ahead.
   const saved = first.saved(5600)
   assert.ok(saved !== undefined && saved.at > 5500 && saved.sea.animals.length > 0)
